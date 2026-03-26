@@ -39,9 +39,9 @@ export function HUD({ lives, gameStatus, onRestart }) {
             display: "flex",
             gap: 2,
         }}>
-            {[0, 1, 2].map((i) => {
+            {[0, 1, 2].map((i) => (
                 <span key={i} style={heartStyle(i < lives)}>♥️</span>
-            })}
+            ))}
         </div>
     );
 }

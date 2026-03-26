@@ -95,7 +95,7 @@ export class Game {
         for (const enemy of this.enemies) {
             if (!enemy.alive) continue;
             const collision = resolveAABB(this.player.body, enemy.body);
-            if (!this.collision) continue;
+            if (!collision) continue;
 
             // Pular em cima mata o inimigo
             if (collision.axis === "y" && collision.direction === "bottom" && this.player.body.vy > 0) {
