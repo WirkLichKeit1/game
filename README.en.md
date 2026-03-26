@@ -1,4 +1,4 @@
-# [🇧🇷 Leia em Português](README.md)
+[🇧🇷 Leia em Português](README.md)
 
 # 🎮 Platformer Game
 
