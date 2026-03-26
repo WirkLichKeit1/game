@@ -56,6 +56,7 @@ export class Player {
         }
 
         if (this.body.x < 0) this.body.x = 0;
+        if (this.body.x + this.body.width > 800) this.body.x = 800 - this.body.width;
     }
 
     render(ctx) {
