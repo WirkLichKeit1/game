@@ -9,13 +9,18 @@ export function GameCanvas({ gameRef, onLoseLife, onWin, paused }) {
         const game = new Game(canvas, { onLoseLife, onWin });
         gameRef.current = game;
         game.start();
-        return () => game.stop();
+        
+        return () => {
+            game.destroy();
+            if (gameRef.current === game) gameRef.current = null;
+        }; 
     }, []);
 
     useEffect(() => {
-        if (!gameRef.current) return;
-        if (paused) gameRef.current.stop();
-        else gameRef.current.start();
+        const game = gameRef.current;
+        if (!game) return;
+        if (paused) game.stop();
+        else game.start();
     }, [paused]);
 
     return (

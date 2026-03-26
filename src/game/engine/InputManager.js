@@ -5,22 +5,33 @@ export class InputManager {
             right: false,
             jump: false,
         };
+        this._onKeyDown = null;
+        this._onKeyUp = null;
         this._bindKeyboard();
     }
 
     _bindKeyboard() {
         const map = {
             ArrowLeft: "left", KeyA: "left",
-            ArrowRight: "right", keyD: "right",
-            ArrowUp: "jump", keyW: "jump", Space: "jump",
+            ArrowRight: "right", KeyD: "right",
+            ArrowUp: "jump", KeyW: "jump", Space: "jump",
         };
 
-        window.addEventListener("keydown", (e) => {
+        this._onKeyDown = (e) => {
             if (map[e.code]) this.keys[map[e.code]] = true;
-        });
-        window.addEventListener("keyup", (e) => {
+        };
+
+        this._onKeyUp = (e) => {
             if (map[e.code]) this.keys[map[e.code]] = false;
-        });
+        }
+
+        window.addEventListener("keydown", this._onKeyDown);
+        window.addEventListener("keyup", this._onKeyUp);
+    }
+
+    destroy() {
+        window.removeEventListener("keydown", this._onKeyDown);
+        window.removeEventListener("keyup", this._onKeyUp);
     }
 
     // chamado pelos botões do D-pad

@@ -72,6 +72,11 @@ export class Game {
     start() { this.loop.start(); }
     stop() { this.loop.stop(); }
 
+    destroy() {
+        this.loop.stop();
+        this.input.destroy();
+    }
+
     update(delta) {
         this.player.update(delta, this.input, this.platforms, WORLD_WIDTH);
         this.camera.follow(this.player.body, delta);
