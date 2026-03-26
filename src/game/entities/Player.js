@@ -10,7 +10,7 @@ export class Player {
         this.facing = 1;
     }
 
-    update(delta, input, platforms) {
+    update(delta, input, platforms, worldWidth) {
         const { keys } = input;
 
         if (keys.left) {
@@ -55,8 +55,11 @@ export class Player {
             }
         }
 
+        // Limites do mundo
         if (this.body.x < 0) this.body.x = 0;
-        if (this.body.x + this.body.width > 800) this.body.x = 800 - this.body.width;
+        if (this.body.x + this.body.width > worldWidth) {
+            this.body.x = worldWidth - this.body.width;
+        }
     }
 
     render(ctx) {
