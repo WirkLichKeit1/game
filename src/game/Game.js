@@ -38,7 +38,7 @@ export class Game {
             new Platform(1850, 380, 140, 18),
             new Platform(2050, 290, 140, 18),
             new Platform(2250, 390, 140, 18),
-            new Platform(2250, 350, 180, 18),
+            new Platform(2450, 350, 180, 18),
             new Platform(2750, 250, 160, 18),
         ];
 
