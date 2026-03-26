@@ -14,7 +14,7 @@ export class Camera {
         const idealY = target.y + target.height / 2 - this.viewHeight / 2;
 
         // Lerp - câmera segue suavemente, não teleporta
-        const speed = 0;
+        const speed = 8;
         this.x += (idealX - this.x) * speed * delta;
         this.y += (idealY - this.y) * speed * delta;
 

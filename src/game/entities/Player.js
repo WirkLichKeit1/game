@@ -1,5 +1,6 @@
 import { PhysicsBody } from "../physics/PhysicsBody.js";
 import { resolveAABB } from "../physics/AABB.js";
+import { AnimationController } from "./AnimationController.js";
 
 const MOVE_SPEED = 280;
 const JUMP_FORCE = -850;
@@ -8,6 +9,7 @@ export class Player {
     constructor(x, y) {
         this.body = new PhysicsBody(x, y, 40, 50);
         this.facing = 1;
+        this.anim = new AnimationController();
     }
 
     update(delta, input, platforms, worldWidth) {
@@ -60,17 +62,50 @@ export class Player {
         if (this.body.x + this.body.width > worldWidth) {
             this.body.x = worldWidth - this.body.width;
         }
+
+        this.anim.update(delta, this.body);
     }
 
     render(ctx) {
         const { x, y, width, height } = this.body;
+        const { squash, legAngle, state } = this.anim;
 
+        // Centro do personagem - ponto de origem do squash
+        const cx = x + width / 2;
+        const cy = y + height;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(this.facing, squash);
+
+        // Pernas
+        this._drawLeg(ctx, -10, 0, legAngle, width, height);
+        this._drawLeg(ctx, 10, 0, -legAngle, width, height);
+
+        // Corpo
+        ctx.fillStyle = state === "jump" || state === "fall" ? "#5BA3F5" : "#4A90E2";
+        ctx.fillRect(-width / 2, -height, width, height * 0.65);
+
+        // Cabeça
         ctx.fillStyle = "#4A90E2";
-        ctx.fillRect(x, y, width, height);
+        const headSize = width * 0.72;
+        ctx.fillRect(-headSize / 2, -height - headSize * 0.6, headSize, headSize * 0.75);
 
-        // olhinho indicando direção
+        // Olho
         ctx.fillStyle = "#fff";
-        const eyeX = this.facing === 1 ? x + width - 12 : x + 6;
-        ctx.fillRect(eyeX, y + 12, 8, 8);
+        ctx.fillRect(6, -height - headSize * 0.4, 7, 7);
+        ctx.fillStyle = "#1a1a2e";
+        ctx.fillRect(8, -height - headSize * 0.35, 4, 4);
+
+        ctx.restore();
+    }
+
+    _drawLeg(ctx, offsetX, offsetY, angle, width, height) {
+        ctx.save();
+        ctx.translate(offsetX, offsetY - height * 0.35);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#3a7bd5";
+        ctx.fillRect(-5, 0, 10, height * 0.42);
+        ctx.restore();
     }
 }
