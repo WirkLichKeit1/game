@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 
 export function useGameState() {
     const [lives, setLives] = useState(3);
-    const [gameStatus, setGameStatus] = useState("playing"); // playing | dead | win
+    const [gameStatus, setGameStatus] = useState("menu"); // menu é o estado inicial - playing | dead | win
 
     const loseLife = useCallback(() => {
         setLives((prev) => {
@@ -21,5 +21,10 @@ export function useGameState() {
         setGameStatus("playing");
     }, []);
 
-    return { lives, gameStatus, loseLife, win, reset };
+    const goToMenu = useCallback(() => {
+        setLives(3);
+        setGameStatus("menu");
+    }, []);
+
+    return { lives, gameStatus, loseLife, win, reset, goToMenu };
 }

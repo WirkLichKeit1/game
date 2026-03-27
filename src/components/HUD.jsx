@@ -1,4 +1,4 @@
-export function HUD({ lives, gameStatus, onRestart }) {
+export function HUD({ lives, gameStatus, onRestart, onMenu }) {
     const heartStyle = (filled) => ({
         fontSize: 24,
         opacity: filled ? 1 : 0.25,
@@ -14,6 +14,9 @@ export function HUD({ lives, gameStatus, onRestart }) {
                 <button onClick={onRestart} style={btnStyle("#e74c3c")}>
                     Tentar novamente
                 </button>
+                <button onClick={onMenu} style={btnStyle("#888")}>
+                    Menu
+                </button>
             </div>
         );
     }
@@ -24,9 +27,14 @@ export function HUD({ lives, gameStatus, onRestart }) {
                 <p style={{ color: "#2ecc71", fontSize: 36, fontWeight: "bold", margin: 0 }}>
                     Você venceu!
                 </p>
-                <button onClick={onRestart} style={btnStyle("#2ecc71")}>
-                    Jogar novamente
-                </button>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={onRestart} style={btnStyle("#2ecc71")}>
+                        Jogar novamente
+                    </button>
+                    <button onClick={onMenu} style={btnStyle("#888")}>
+                        Menu
+                    </button>
+                </div>
             </div>
         );
     }
@@ -42,6 +50,22 @@ export function HUD({ lives, gameStatus, onRestart }) {
             {[0, 1, 2].map((i) => (
                 <span key={i} style={heartStyle(i < lives)}>♥️</span>
             ))}
+            <button
+                onClick={onMenu}
+                style={{
+                    marginLeft: 8,
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 8,
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 12,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                    fontFamily: "monospace",
+                }}
+            >
+                ☰ Menu
+            </button>
         </div>
     );
 }
