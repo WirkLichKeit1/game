@@ -22,7 +22,7 @@ export default function App() {
 
     const handlePlay = useCallback((levelId) => {
         play(levelId);
-        startEngine();
+        startEngine(levelId);
     }, [play, startEngine]);
 
     const handleRestart = useCallback(() => {
