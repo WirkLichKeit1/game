@@ -100,7 +100,7 @@ export class Player {
         ctx.restore();
     }
 
-    _drawLeg(ctx, offsetX, offsetY, angle, width, height) {
+    _drawLeg(ctx, offsetX, offsetY, angle, height) {
         ctx.save();
         ctx.translate(offsetX, offsetY - height * 0.35);
         ctx.rotate(angle);

@@ -1,9 +1,11 @@
 export class Platform {
-    constructor(x, y, width, height) {
+    constructor(x, y, width, height, theme = {}) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.colorBody = theme.platform ?? "#5a8a5a";
+        this.colorTop = theme.platformTop ?? "#7bc47b";
     }
 
     get bounds() {
@@ -17,11 +19,11 @@ export class Platform {
 
     render(ctx) {
         // Corpo da plataforma
-        ctx.fillStyle = "#5a8a5a";
+        ctx.fillStyle = this.colorBody;
         ctx.fillRect(this.x, this.y, this.width, this.height);
 
         // Topo mais claro para dar sensação de profundidade
-        ctx.fillStyle = "#7bc47b";
+        ctx.fillStyle = this.colorTop;
         ctx.fillRect(this.x, this.y, this.width, 6);
     }
 }

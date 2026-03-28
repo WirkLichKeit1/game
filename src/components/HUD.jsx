@@ -1,94 +1,97 @@
-export function HUD({ lives, gameStatus, onRestart, onMenu }) {
-    const heartStyle = (filled) => ({
-        fontSize: 24,
-        opacity: filled ? 1 : 0.25,
-        marginRight: 4,
-    });
+export function HUD({ lives, gameStatus, onRestart, onMenu, onNext, hasNext }) {
 
     if (gameStatus === "dead") {
         return (
-            <div style={overlayStyle("#c0392b22")}>
-                <p style={{ color: "#e74c3c", fontSize: 36, fontWeight: "bold", margin: 0 }}>
-                    Game Over
+            <div style={overlay("#c0392b18")}>
+                <p style={{ color:"#e74c3c", fontSize:32, fontWeight:"bold", margin:0, fontFamily:FONT }}>
+                    GAME OVER
                 </p>
-                <button onClick={onRestart} style={btnStyle("#e74c3c")}>
-                    Tentar novamente
-                </button>
-                <button onClick={onMenu} style={btnStyle("#888")}>
-                    Menu
-                </button>
+                <div style={btnRow}>
+                    <Btn color="#888"    onClick={onMenu}>    MENU      </Btn>
+                    <Btn color="#e74c3c" onClick={onRestart}> REINICIAR </Btn>
+                </div>
             </div>
         );
     }
 
     if (gameStatus === "win") {
         return (
-            <div style={overlayStyle("#27ae6022")}>
-                <p style={{ color: "#2ecc71", fontSize: 36, fontWeight: "bold", margin: 0 }}>
-                    Você venceu!
+            <div style={overlay("#27ae6018")}>
+                <p style={{ color:"#2ecc71", fontSize:32, fontWeight:"bold", margin:0, fontFamily:FONT }}>
+                    FASE CONCLUÍDA!
                 </p>
-                <div style={{ display: "flex", gap: 12 }}>
-                    <button onClick={onRestart} style={btnStyle("#2ecc71")}>
-                        Jogar novamente
-                    </button>
-                    <button onClick={onMenu} style={btnStyle("#888")}>
-                        Menu
-                    </button>
+                <p style={{ color:"rgba(46,204,113,0.6)", fontSize:12, margin:"4px 0 0", fontFamily:FONT, letterSpacing:"0.15em" }}>
+                    {hasNext ? "PRÓXIMA FASE DESBLOQUEADA" : "MAIS FASES EM BREVE! 🦀"}
+                </p>
+                <div style={btnRow}>
+                    <Btn color="#888"    onClick={onMenu}>    MENU      </Btn>
+                    <Btn color="#2ecc71" onClick={onRestart}> REINICIAR </Btn>
+                    {hasNext && (
+                        <Btn color="#f5c518" onClick={onNext}> PRÓXIMA ▸ </Btn>
+                    )}
                 </div>
             </div>
         );
     }
 
+    // HUD de jogo — vidas + botão menu
     return (
         <div style={{
-            position: "fixed",
-            top: 16,
-            left: 16,
-            display: "flex",
-            gap: 2,
+            position:"fixed", top:16, left:16,
+            display:"flex", alignItems:"center", gap:8,
         }}>
-            {[0, 1, 2].map((i) => (
-                <span key={i} style={heartStyle(i < lives)}>♥️</span>
+            {[0,1,2].map(i => (
+                <span key={i} style={{ fontSize:22, opacity: i < lives ? 1 : 0.2 }}>♥️</span>
             ))}
-            <button
-                onClick={onMenu}
-                style={{
-                    marginLeft: 8,
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 8,
-                    color: "rgba(255,255,255,0.6)",
-                    fontSize: 12,
-                    padding: "4px 10px",
-                    cursor: "pointer",
-                    fontFamily: "monospace",
-                }}
-            >
-                ☰ Menu
-            </button>
+            <button style={menuBtn} onClick={onMenu}>☰</button>
         </div>
     );
 }
 
-const overlayStyle = (bg) => ({
-    position: "fixed",
-    inset: 0,
-    background: bg,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 24,
-    fontFamily: "monospace",
+/* ── Sub-componentes ── */
+const FONT = "'Courier New', Courier, monospace";
+
+function Btn({ color, onClick, children }) {
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                padding:"11px 22px",
+                background:"transparent",
+                border:`1px solid ${color}`,
+                color,
+                fontSize:13,
+                borderRadius:0,
+                cursor:"pointer",
+                fontFamily:FONT,
+                letterSpacing:"0.12em",
+            }}
+        >
+            {children}
+        </button>
+    );
+}
+
+const overlay = bg => ({
+    position:"fixed", inset:0,
+    background:bg,
+    display:"flex", flexDirection:"column",
+    alignItems:"center", justifyContent:"center",
+    gap:24,
+    fontFamily:FONT,
 });
 
-const btnStyle = (color) => ({
-    padding: "12px 32px",
-    background: "transparent",
-    border: `2px solid ${color}`,
-    color: color,
-    fontSize: 18,
-    borderRadius: 8,
-    cursor: "pointer",
-    fontFamily: "monospace",
-});
+const btnRow = {
+    display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center",
+};
+
+const menuBtn = {
+    marginLeft:6,
+    background:"rgba(255,255,255,0.08)",
+    border:"1px solid rgba(255,255,255,0.15)",
+    borderRadius:0,
+    color:"rgba(255,255,255,0.5)",
+    fontSize:16,
+    padding:"4px 10px",
+    cursor:"pointer",
+};

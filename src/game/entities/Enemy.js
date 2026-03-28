@@ -1,17 +1,18 @@
 import { PhysicsBody } from "../physics/PhysicsBody.js";
 import { resolveAABB } from "../physics/AABB.js";
 
-const SPEED = 100;
-
 export class Enemy {
-    constructor(x, y, patrolLeft, patrolRight) {
+    constructor(x, y, patrolLeft, patrolRight, speed = 100, theme = {}) {
         this.body = new PhysicsBody(x, y, 36, 36);
         this.patrolLeft = patrolLeft;
         this.patrolRight = patrolRight;
+        this.speed = speed;
         this.facing = 1;
         this.alive = true;
         this.legAngle = 0;
         this.timer = 0;
+        this.colorBody = theme.enemy ?? "#c0392b";
+        this.colorHead = theme.enemyHead ?? "#e74c3c";
     }
 
     update(delta, platforms) {
@@ -20,19 +21,19 @@ export class Enemy {
         this.timer += delta;
         this.legAngle = Math.sin(this.timer * 14) * 0.35;
 
-        this.body.vx = this.facing * SPEED;
+        this.body.vx = this.facing * this.speed;
         this.body.update(delta);
         this.body.onGround = false;
 
         for (const platform of platforms) {
-            const collision = resolveAABB(this.body, platform);
-            if (!collision) continue;
+            const col = resolveAABB(this.body, platform);
+            if (!col) continue;
 
-            if (collision.axis === "y" && collision.direction === "bottom") {
-                this.body.y -= collision.overlap;
+            if (col.axis === "y" && col.direction === "bottom") {
+                this.body.y -= col.overlap;
                 this.body.vy = 0;
                 this.body.onGround = true;
-            } else if (collision.axis === "x") {
+            } else if (col.axis === "x") {
                 this.facing *= -1;
             }
         }
@@ -64,11 +65,11 @@ export class Enemy {
         this._drawLeg(ctx, 8, 0, -this.legAngle, height);
 
         // Corpo
-        ctx.fillStyle = "#c0392b";
+        ctx.fillStyle = this.colorBody;
         ctx.fillRect(-width / 2, -height, width, height * 0.65);
 
         // Cabeça
-        ctx.fillStyle = "#e74c3c";
+        ctx.fillStyle = this.colorHead;
         const hs = width * 0.75;
         ctx.fillRect(-hs / 2, -height - hs * 0.6, hs, hs * 0.75);
 

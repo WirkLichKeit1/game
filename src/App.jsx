@@ -8,23 +8,36 @@ import { useGameState } from "./hooks/useGameState.js";
 
 export default function App() {
     const gameRef = useRef(null);
-    const { lives, gameStatus, loseLife, win, reset, goToMenu } = useGameState();
 
-    const handlePlay = useCallback((phase) => {
-        reset(phase);
-        // Pequeno delay para o canvas montar antes de iniciar
+    const {
+        lives, gameStatus, currentLevel, maxUnlocked, hasNext, loseLife, win, play, restart, goToMenu,
+    } = useGameState();
+
+    // Inicia ou reinicia o engine com o level correto
+    const startEngine = useCallback((levelId) => {
         setTimeout(() => {
-            gameRef.current?.reset({ onLoseLife: loseLife, onWin: win });
+            gameRef.current?.reset({ onLoseLife: loseLife, onWin: win }, levelId);
         }, 50);
-    }, [reset, loseLife, win]);
+    }, [loseLife, win]);
+
+    const handlePlay = useCallback((levelId) => {
+        play(levelId);
+        startEngine();
+    }, [play, startEngine]);
 
     const handleRestart = useCallback(() => {
-        reset();
-        gameRef.current?.reset({ onLoseLife: loseLife, onWin: win });
-    }, [reset, loseLife, win]);
+        restart();
+        startEngine(currentLevel);
+    }, [restart, startEngine, currentLevel]);
+
+    const handleNext = useCallback(() => {
+        const next = currentLevel + 1;
+        play(next);
+        startEngine(next);
+    }, [play, startEngine, currentLevel]);
 
     if (gameStatus === "menu") {
-        return <MenuScreen onPlay={handlePlay} />;
+        return <MenuScreen onPlay={handlePlay} maxUnlocked={maxUnlocked} />;
     }
     
     return (
@@ -40,12 +53,15 @@ export default function App() {
                 onLoseLife={loseLife}
                 onWin={win}
                 paused={gameStatus !== "playing"}
+                levelId={currentLevel}
             />
             <HUD
                 lives={lives}
                 gameStatus={gameStatus}
                 onRestart={handleRestart}
                 onMenu={goToMenu}
+                onNext={handleNext}
+                hasNext={hasNext}
             />
             {gameStatus === "playing" && <DPad gameRef={gameRef} />}
         </div>

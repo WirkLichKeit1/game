@@ -1,35 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const PHASES = [
-    { id: 1, label: "Fase 1", sublabel: "O Início", unlocked: true },
-    { id: 2, label: "Fase 2", sublabel: "Em breve", unlocked: false },
-    { id: 3, label: "Fase 3", sublabel: "Em breve", unlocked: false },
+const PHASE_DATA = [
+    { id: 1, label: "FASE 1", sublabel: "PRAIA DO PINA" },
+    { id: 2, label: "FASE 2", sublabel: "CAPIBARIBE"    },
+    { id: 3, label: "FASE 3", sublabel: "OLINDA ALTA"   },
 ];
 
-export function MenuScreen({ onPlay, onCredits }) {
+export function MenuScreen({ onPlay, maxUnlocked }) {
     const [selectedPhase, setSelectedPhase] = useState(1);
-    const [showCredits, setShowCredits] = useState(false);
+    const [showCredits,   setShowCredits]   = useState(false);
+    const [blink,         setBlink]         = useState(true);
+    const [stars] = useState(() =>
+        Array.from({ length: 36 }, () => ({
+            x:     Math.random() * 100,
+            y:     Math.random() * 60,
+            size:  Math.random() < 0.25 ? 2 : 1,
+            speed: 1.8 + Math.random() * 2.4,
+            delay: Math.random() * 4,
+        }))
+    );
+
+    useEffect(() => {
+        const t = setInterval(() => setBlink(b => !b), 600);
+        return () => clearInterval(t);
+    }, []);
 
     if (showCredits) {
         return (
-            <div style={styles.root}>
-                <Background />
-                <div style={styles.card}>
-                    <p style={styles.cardTitle}>Sobre</p>
-                    <p style={styles.creditText}>
-                        <strong>Lario</strong> é um jogo de plataforma muito top.
+            <div style={s.root}>
+                <BgScene stars={stars} />
+                <div style={s.creditsBox}>
+                    <span style={s.creditsEye}>🦀</span>
+                    <p style={s.creditsHeading}>MANGUE RUN</p>
+                    <p style={s.creditsBody}>
+                        {"Um jogo de plataforma feito\ncom React e Canvas puro.\n\nInspirado no mangue beat e\nno povo de Pernambuco."}
                     </p>
-                    <p style={styles.creditText}>
-                        Inspirado nas vozes da minha cabeça.
+                    <p style={{ ...s.creditsBody, marginTop: 16, opacity: 0.45 }}>
+                        v0.1 — feito no Replit
                     </p>
-                    <p style={{ ...styles.creditText, marginTop: 24, opacity: 0.5, fontSize: 13 }}>
-                        v0.1
-                    </p>
-                    <button
-                        style={styles.btnSecondary}
-                        onClick={() => setShowCredits(false)}
-                    >
-                        Voltar
+                    <button style={s.smallBtn} onClick={() => setShowCredits(false)}>
+                        [ VOLTAR ]
                     </button>
                 </div>
             </div>
@@ -37,243 +47,158 @@ export function MenuScreen({ onPlay, onCredits }) {
     }
 
     return (
-        <div style={styles.root}>
-            <Background />
+        <div style={s.root}>
+            <BgScene stars={stars} />
+            <div style={s.scanlines} />
 
-            <div style={styles.content}>
-                {/* Logo */}
-                <div style={styles.logoWrap}>
-                    <span style={styles.logoAccent}>🍄</span>
-                    <h1 style={styles.title}>Lario</h1>
-                    <p style={styles.subtitle}>Made in PE</p>
+            <div style={s.layout}>
+
+                <div style={s.logoBox}>
+                    <div style={s.logoIcon}>🦀</div>
+                    <p style={s.logoSub}>P E R N A M B U C O</p>
+                    <h1 style={s.title}>MANGUE<br/>RUN</h1>
+                    <p style={s.logoSub}>── plataforma retrô ──</p>
                 </div>
 
-                {/* Seleção de fase */}
-                <div style={styles.phaseRow}>
-                    {PHASES.map((phase) => (
-                        <button
-                            key={phase.id}
-                            style={{
-                                ...styles.phaseBtn,
-                                ...(selectedPhase === phase.id && phase.unlocked
-                                    ? styles.phaseBtnActive
-                                    : {}),
-                                ...(phase.unlocked ? {} : styles.phaseBtnLocked),
-                            }}
-                            onClick={() => phase.unlocked && setSelectedPhase(phase.id)}
-                            disabled={!phase.unlocked}
-                        >
-                            <span style={styles.phaseNum}>{phase.unlocked ? phase.id : "🔒"}</span>
-                            <span style={styles.phaseName}>{phase.label}</span>
-                            <span style={styles.phaseSub}>{phase.sublabel}</span>
-                        </button>
-                    ))}
+                <div style={s.section}>
+                    <p style={s.label}>— SELECIONE A FASE —</p>
+                    <div style={s.phaseRow}>
+                        {PHASE_DATA.map(ph => {
+                            const unlocked = ph.id <= maxUnlocked;
+                            const active   = selectedPhase === ph.id && unlocked;
+                            return (
+                                <button
+                                    key={ph.id}
+                                    style={{
+                                        ...s.phaseBtn,
+                                        ...(active   ? s.phaseBtnOn  : {}),
+                                        ...(!unlocked ? s.phaseBtnOff : {}),
+                                    }}
+                                    onClick={() => unlocked && setSelectedPhase(ph.id)}
+                                    disabled={!unlocked}
+                                >
+                                    {active && <span style={s.arrow}>▸</span>}
+                                    <span style={s.phaseNum}>
+                                        {unlocked ? ph.id : "🔒"}
+                                    </span>
+                                    <span style={s.phaseName}>{ph.label}</span>
+                                    <span style={{ ...s.phaseLoc, color: unlocked ? C.muted : C.locked }}>
+                                        {unlocked ? ph.sublabel : "??????"}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                {/* Botão principal */}
-                <button
-                    style={styles.btnPlay}
-                    onClick={() => onPlay(selectedPhase)}
-                >
-                    Jogar
+                <button style={s.playBtn} onClick={() => onPlay(selectedPhase)}>
+                    {blink ? "▸  JOGAR  ◂" : "   JOGAR   "}
                 </button>
 
-                {/* Créditos */}
-                <button
-                    style={styles.btnSecondary}
-                    onClick={() => setShowCredits(true)}
-                >
-                    Sobre o jogo
-                </button>
+                <div style={s.footer}>
+                    <button style={s.ghostBtn} onClick={() => setShowCredits(true)}>SOBRE</button>
+                    <span style={s.dot}>•</span>
+                    <span style={s.hiScore}>HI  00000</span>
+                </div>
+
+                <p style={{ ...s.coin, opacity: blink ? 0.55 : 0.18 }}>
+                    INSERT COIN
+                </p>
             </div>
         </div>
     );
 }
 
-/* Fundo animado com círculos suaves */
-function Background() {
+/* ─── Cena de fundo ─── */
+function BgScene({ stars }) {
+    const palms = [6, 20, 38, 58, 74, 88];
     return (
-        <div style={styles.bg} aria-hidden="true">
-            <div style={{ ...styles.circle, width: 320, height: 320, top: -80, right: -60, opacity: 0.07 }} />
-            <div style={{ ...styles.circle, width: 200, height: 200, bottom: 60, left: -40, opacity: 0.05 }} />
-            <div style={{ ...styles.circle, width: 120, height: 120, top: "40%", left: "10%", opacity: 0.04 }} />
+        <div style={s.bgWrap}>
+            <style>{`
+                @keyframes twinkle {
+                    0%,100% { opacity:.15 }
+                    50%     { opacity:.7  }
+                }
+            `}</style>
+            <div style={s.sky} />
+            <div style={s.moon} />
+            {stars.map((st, i) => (
+                <div key={i} style={{
+                    position: "absolute",
+                    left: `${st.x}%`, top: `${st.y}%`,
+                    width: st.size, height: st.size,
+                    background: "#c8d8e8",
+                    animation: `twinkle ${st.speed}s ease-in-out infinite`,
+                    animationDelay: `${st.delay}s`,
+                }}/>
+            ))}
+            <div style={s.water} />
+            <div style={s.waterSheen} />
+            <div style={s.ground} />
+            <div style={s.groundLine} />
+            {palms.map((left, i) => <Palm key={i} left={left} />)}
         </div>
     );
 }
 
-const ACCENT = "#F2A61D";
-const ACCENT2 = "#E05C1A";
-const BG = "#0E0E16";
-const SURFACE = "rgba(255,255,255,0.05)";
-const BORDER = "rgba(255,255,255,0.1)";
-const TEXT = "#F0EDE8";
-const MUTED = "rgba(240,237,232,0.45)";
+function Palm({ left }) {
+    return (
+        <div style={{ position:"absolute", bottom:36, left:`${left}%`, display:"flex", flexDirection:"column", alignItems:"center" }}>
+            <div style={{ display:"flex", gap:2 }}>
+                <div style={{ width:6, height:6,  background:C.leaf, transform:"rotate(-30deg)" }}/>
+                <div style={{ width:6, height:10, background:C.leaf }}/>
+                <div style={{ width:6, height:6,  background:C.leaf, transform:"rotate(30deg)"  }}/>
+            </div>
+            <div style={{ width:4, height:28, background:C.trunk }}/>
+        </div>
+    );
+}
 
-const styles = {
-    root: {
-        position: "fixed",
-        inset: 0,
-        background: BG,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Georgia', serif",
-        overflow: "hidden",
-    },
-    bg: {
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-    },
-    circle: {
-        position: "absolute",
-        borderRadius: "50%",
-        background: ACCENT,
-    },
-    content: {
-        position: "relative",
-        zIndex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 28,
-        padding: "40px 24px",
-        width: "100%",
-        maxWidth: 420,
-    },
-    logoWrap: {
-        textAlign: "center",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-    },
-    logoAccent: {
-        fontSize: 52,
-        lineHeight: 1,
-        filter: "drop-shadow(0 0 16px rgba(242,166,29,0.5))",
-    },
-    title: {
-        margin: 0,
-        fontSize: 44,
-        fontWeight: "bold",
-        lineHeight: 1.1,
-        textAlign: "center",
-        color: TEXT,
-        letterSpacing: "-0.5px",
-        textShadow: `0 0 40px rgba(242,166,29,0.3)`,
-    },
-    subtitle: {
-        margin: 0,
-        fontSize: 13,
-        color: MUTED,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "monospace",
-    },
+const C = {
+    sky1:"#0d1b2a", sky2:"#162840", sky3:"#1e3a30",
+    water:"#0e2233", wave:"#16304a",
+    ground:"#1a2e18", gline:"#2a4828",
+    leaf:"#2d5c30", trunk:"#3a2a18", moon:"#c8d4bc",
+    text:"#c8d8c0", muted:"#6a8878", locked:"#3a4a40",
+    accent:"#7ab890", border:"#3a5848",
+};
 
-    /* Fases */
-    phaseRow: {
-        display: "flex",
-        gap: 12,
-        width: "100%",
-    },
-    phaseBtn: {
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-        padding: "14px 8px",
-        background: SURFACE,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 14,
-        color: TEXT,
-        cursor: "pointer",
-        transition: "all 0.18s ease",
-        fontFamily: "inherit",
-    },
-    phaseBtnActive: {
-        background: `rgba(242,166,29,0.12)`,
-        border: `1.5px solid ${ACCENT}`,
-        boxShadow: `0 0 20px rgba(242,166,29,0.15)`,
-    },
-    phaseBtnLocked: {
-        opacity: 0.35,
-        cursor: "not-allowed",
-    },
-    phaseNum: {
-        fontSize: 22,
-        fontWeight: "bold",
-        color: ACCENT,
-        lineHeight: 1,
-    },
-    phaseName: {
-        fontSize: 13,
-        fontWeight: "bold",
-        color: TEXT,
-    },
-    phaseSub: {
-        fontSize: 11,
-        color: MUTED,
-        fontFamily: "monospace",
-    },
+const FONT = "'Courier New', Courier, monospace";
 
-    /* Botões */
-    btnPlay: {
-        width: "100%",
-        padding: "18px 0",
-        background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT2} 100%)`,
-        border: "none",
-        borderRadius: 14,
-        color: "#0E0E16",
-        fontSize: 20,
-        fontWeight: "bold",
-        fontFamily: "inherit",
-        cursor: "pointer",
-        letterSpacing: "0.04em",
-        boxShadow: `0 4px 24px rgba(242,166,29,0.3)`,
-    },
-    btnSecondary: {
-        background: "none",
-        border: `1px solid ${BORDER}`,
-        borderRadius: 10,
-        color: MUTED,
-        fontSize: 14,
-        fontFamily: "inherit",
-        cursor: "pointer",
-        padding: "10px 24px",
-    },
-
-    /* Card de créditos */
-    card: {
-        position: "relative",
-        zIndex: 1,
-        background: SURFACE,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 20,
-        padding: "40px 32px",
-        width: "100%",
-        maxWidth: 380,
-        margin: "0 24px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 16,
-    },
-    cardTitle: {
-        margin: 0,
-        fontSize: 22,
-        fontWeight: "bold",
-        color: TEXT,
-        fontFamily: "inherit",
-    },
-    creditText: {
-        margin: 0,
-        fontSize: 15,
-        color: MUTED,
-        textAlign: "center",
-        lineHeight: 1.6,
-        fontFamily: "inherit",
-    },
+const s = {
+    root:{ position:"fixed", inset:0, background:C.sky1, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT, overflow:"hidden", userSelect:"none", WebkitUserSelect:"none" },
+    bgWrap:{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden" },
+    sky:{ position:"absolute", inset:0, background:`linear-gradient(180deg,${C.sky1} 0%,${C.sky2} 55%,${C.sky3} 100%)` },
+    moon:{ position:"absolute", top:"9%", right:"14%", width:18, height:18, background:C.moon, opacity:0.6 },
+    water:{ position:"absolute", bottom:36, left:0, right:0, height:52, background:C.water },
+    waterSheen:{ position:"absolute", bottom:72, left:0, right:0, height:3, background:C.wave, opacity:0.5 },
+    ground:{ position:"absolute", bottom:0, left:0, right:0, height:38, background:C.ground },
+    groundLine:{ position:"absolute", bottom:36, left:0, right:0, height:2, background:C.gline },
+    scanlines:{ position:"absolute", inset:0, pointerEvents:"none", zIndex:10, background:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)" },
+    layout:{ position:"relative", zIndex:2, display:"flex", flexDirection:"column", alignItems:"center", gap:18, padding:"24px 20px 18px", width:"100%", maxWidth:380 },
+    logoBox:{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"18px 28px 14px", border:`1px solid ${C.border}`, background:"rgba(10,20,15,0.55)", width:"100%", boxSizing:"border-box" },
+    logoIcon:{ fontSize:28, lineHeight:1, marginBottom:2 },
+    logoSub:{ margin:0, fontSize:9, color:C.muted, letterSpacing:"0.22em", fontFamily:FONT },
+    title:{ margin:"6px 0 4px", fontSize:40, fontWeight:"bold", lineHeight:1.1, textAlign:"center", letterSpacing:"0.08em", color:C.text, textShadow:"1px 1px 0 #000", fontFamily:FONT },
+    section:{ width:"100%" },
+    label:{ margin:"0 0 8px", fontSize:10, color:C.muted, letterSpacing:"0.18em", textAlign:"center", fontFamily:FONT },
+    phaseRow:{ display:"flex", gap:8, width:"100%" },
+    phaseBtn:{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"10px 4px", background:"rgba(10,20,15,0.5)", border:`1px solid ${C.border}`, color:C.text, cursor:"pointer", fontFamily:FONT, position:"relative" },
+    phaseBtnOn:{ border:`1px solid ${C.accent}`, background:"rgba(122,184,144,0.07)" },
+    phaseBtnOff:{ opacity:0.35, cursor:"not-allowed" },
+    arrow:{ position:"absolute", top:8, left:5, fontSize:9, color:C.accent },
+    phaseNum:{ fontSize:18, fontWeight:"bold", color:C.accent, lineHeight:1 },
+    phaseName:{ fontSize:11, color:C.text, letterSpacing:"0.08em" },
+    phaseLoc:{ fontSize:8, letterSpacing:"0.1em" },
+    playBtn:{ width:"100%", padding:"15px 0", background:"rgba(10,20,15,0.6)", border:`1px solid ${C.accent}`, color:C.accent, fontSize:20, fontWeight:"bold", fontFamily:FONT, cursor:"pointer", letterSpacing:"0.12em" },
+    footer:{ display:"flex", alignItems:"center", gap:10, fontFamily:FONT },
+    ghostBtn:{ background:"none", border:"none", color:C.muted, fontSize:10, fontFamily:FONT, cursor:"pointer", letterSpacing:"0.12em", padding:0 },
+    dot:{ color:C.border, fontSize:10 },
+    hiScore:{ color:C.muted, fontSize:10, letterSpacing:"0.1em" },
+    coin:{ margin:0, fontSize:9, color:C.muted, letterSpacing:"0.22em", fontFamily:FONT },
+    creditsBox:{ position:"relative", zIndex:2, display:"flex", flexDirection:"column", alignItems:"center", gap:10, padding:"32px 28px", border:`1px solid ${C.border}`, background:"rgba(8,16,12,0.82)", width:"100%", maxWidth:340, margin:"0 20px", boxSizing:"border-box" },
+    creditsEye:{ fontSize:24 },
+    creditsHeading:{ margin:0, fontSize:15, fontWeight:"bold", color:C.text, letterSpacing:"0.15em", fontFamily:FONT },
+    creditsBody:{ margin:0, fontSize:11, color:C.muted, textAlign:"center", lineHeight:1.9, whiteSpace:"pre-line", letterSpacing:"0.05em", fontFamily:FONT },
+    smallBtn:{ marginTop:12, background:"none", border:`1px solid ${C.border}`, color:C.muted, fontSize:11, fontFamily:FONT, cursor:"pointer", padding:"8px 20px", letterSpacing:"0.1em" },
 };
