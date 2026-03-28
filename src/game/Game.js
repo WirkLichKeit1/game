@@ -28,6 +28,7 @@ export class Game {
         this.enemies = lm.enemies;
         this.flagX = lm.flagX;
         this.theme = lm.theme;
+        this.parallax = lm.parallax;
         this.WORLD_WIDTH = lm.worldWidth;
         this.WORLD_HEIGHT = lm.worldHeight;
 
@@ -125,6 +126,8 @@ export class Game {
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        this._renderParallax(ctx);
+
         // Água / vão entre plataformas (fundo do abismo)
         if (theme.water) {
             ctx.fillStyle = theme.water;
@@ -155,6 +158,22 @@ export class Game {
 
         // Nome da fase no canto superior direito
         this._renderLevelName(ctx);
+    }
+
+    _renderParallax(ctx) {
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        const cx = this.camera.x;
+
+        for (const layer of this.parallax) {
+            const ox = (cx * layer.speed) % W;
+            ctx.save();
+            ctx.globalAlpha = layer.alpha ?? 1;
+            for (let tile = -1; tile <= 1; tile++) {
+                layer.draw(ctx, -ox + tile * W, H);
+            }
+            ctx.restore();
+        }
     }
 
     _renderFlag(ctx) {
