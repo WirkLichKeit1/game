@@ -77,15 +77,10 @@ export class Player {
         // Pernas: só o flip horizontal, sem squash
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.scale(this.facing, 1);
-        this._drawLeg(ctx, -10, legAngle, width, height);
-        this._drawLeg(ctx, 10, -legAngle, width, height);
-        ctx.restore();
-
-        // Corpo e cabeça: flip + squash
-        ctx.save();
-        ctx.translate(cx, cy);
         ctx.scale(this.facing, squash);
+        
+        this._drawLeg(ctx, -10, 0, legAngle, height);
+        this._drawLeg(ctx, 10, 0, -legAngle, height);
 
         // Corpo
         ctx.fillStyle = state === "jump" || state === "fall" ? "#5BA3F5" : "#4A90E2";
@@ -99,18 +94,16 @@ export class Player {
         // Olho
         ctx.fillStyle = "#fff";
         ctx.fillRect(6, -height - headSize * 0.4, 7, 7);
+        
         ctx.fillStyle = "#1a1a2e";
         ctx.fillRect(8, -height - headSize * 0.35, 4, 4);
 
         ctx.restore();
     }
 
-    // offsetX: posição horizontal da perna em relação ao centro
-    // angle: ângulo de rotação
-    // height: altura do player (para calcular o comprimento da perna)
-    _drawLeg(ctx, offsetX, angle, height) {
+    _drawLeg(ctx, offsetX, offsetY, angle, height) {
         ctx.save();
-        ctx.translate(offsetX, -height * 0.35);
+        ctx.translate(offsetX, offsetY -height * 0.35);
         ctx.rotate(angle);
         ctx.fillStyle = "#3a7bd5";
         ctx.fillRect(-5, 0, 10, height * 0.42);

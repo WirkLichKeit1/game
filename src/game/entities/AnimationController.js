@@ -20,16 +20,16 @@ export class AnimationController {
 
         // Animação das pernas ao correr
         if (this.state === "run") {
-            this.legAngle = Math.sin(this.timer * 16) * 0.65;
+            this.legAngle = Math.sin(this.timer * 16) * 0.7;
         } else if (this.state === "jump") {
             // Pernas levemente abertas no pulo
-            this.legAngle = 0.3;
+            this.legAngle = 0.35;
         } else if (this.state === "fall") {
             // Pernas levemente fechadas na queda
-            this.legAngle = -0.15;
+            this.legAngle = -0.2;
         } else {
-            // Idle: volta para zero suavemente
-            this.legAngle += (0 - this.legAngle) * 0.2;
+            // Idle: volta para zero
+            this.legAngle = 0;
         }
 
         // Squash ao aterrissar, stretch no pulo
