@@ -5,6 +5,7 @@ import { Camera }       from "./engine/Camera.js";
 import { Player }       from "./entities/Player.js";
 import { LevelManager } from "./LevelManager.js";
 import { ParticleSystem } from "./engine/ParticleSystem.js";
+import { AudioManager } from "./engine/AudioManager.js";
 
 export class Game {
     constructor(canvas, callbacks, levelId = 1) {
@@ -13,6 +14,7 @@ export class Game {
         this.callbacks = callbacks;
         this.input = new InputManager();
         this.particles = new ParticleSystem();
+        this.audio = new AudioManager();
 
         this.levelManager = new LevelManager(levelId);
         this._applyLevel();
@@ -53,17 +55,17 @@ export class Game {
     reset(callbacks, levelId) {
         this.callbacks = callbacks;
         if (levelId !== undefined) {
-            this.levelManager.load(levelId);
+            this.levelManager.load(levelId, this.canvas.width);
         }
         this._applyLevel();
     }
 
     start() { this.loop.start(); }
     stop() { this.loop.stop(); }
-    
     destroy() {
         this.loop.stop();
         this.input.destroy();
+        this.audio.destroy();
     }
 
     update(delta) {
@@ -77,6 +79,7 @@ export class Game {
                 body.y + body.height,
                 this.theme.platformTop ?? "#c4a882"
             );
+            this.audio.jump();
         }
         // Pó ao aterrissar (voltou ao chão)
         if (!this._wasOnGround && body.onGround && moving) {
@@ -120,6 +123,7 @@ export class Game {
                 this.player.body.vy = -500;
                 this.particles.spawnEnemyPop(eCX, eCY, enemy.colorBody);
                 this.camera.shake(4, 0.15);
+                this.audio.enemyDie();
             } else {
                 // Tomou dano
                 this.invincible = 1.5;
@@ -128,6 +132,7 @@ export class Game {
                     this.player.body.y + this.player.body.height / 2
                 );
                 this.camera.shake(8, 0.35);
+                this.audio.damage();
                 
                 const start = this.levelManager.playerStart;
                 this.player.body.x = start.x;
@@ -142,6 +147,7 @@ export class Game {
     _checkFall() {
         if (this.player.body.y > this.WORLD_HEIGHT + 100) {
             this.camera.shake(6, 0.25);
+            this.audio.damage();
             const start = this.levelManager.playerStart;
             this.player.body.x = start.x;
             this.player.body.y = start.y;
@@ -153,6 +159,7 @@ export class Game {
 
     _checkWin() {
         if (this.player.body.x >= this.flagX) {
+            this.audio.win();
             this.callbacks.onWin(this.levelManager.data.id);
         }
     }

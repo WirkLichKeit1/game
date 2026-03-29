@@ -78,9 +78,12 @@ export class Player {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.scale(this.facing, squash);
-        
+
+        ctx.save();
+        ctx.scale(1, 1 / squash)
         this._drawLeg(ctx, -10, 0, legAngle, height);
         this._drawLeg(ctx, 10, 0, -legAngle, height);
+        ctx.restore();
 
         // Corpo
         ctx.fillStyle = state === "jump" || state === "fall" ? "#5BA3F5" : "#4A90E2";
