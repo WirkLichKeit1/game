@@ -33,16 +33,16 @@ export function useGameState() {
         });
     }, []);
 
-    const win = useCallback(() => {
+    const win = useCallback((levelId) => {
         // Desbloqueia a próxima fase e persiste
         setMaxUnlocked(prev => {
-            const next = Math.min(currentLevel + 1, MAX_LEVEL);
+            const next = Math.min(levelId + 1, MAX_LEVEL);
             const updated = Math.max(prev, next);
             saveUnlocked(updated);
             return updated;
         });
         setGameStatus("win");
-    }, [currentLevel]);
+    }, []);
 
     const play = useCallback((levelId) => {
         setCurrentLevel(levelId);

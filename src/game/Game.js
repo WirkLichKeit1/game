@@ -153,7 +153,7 @@ export class Game {
 
     _checkWin() {
         if (this.player.body.x >= this.flagX) {
-            this.callbacks.onWin();
+            this.callbacks.onWin(this.levelManager.data.id);
         }
     }
 

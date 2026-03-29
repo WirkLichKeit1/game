@@ -13,28 +13,22 @@ export default function App() {
         lives, gameStatus, currentLevel, maxUnlocked, hasNext, loseLife, win, play, restart, goToMenu,
     } = useGameState();
 
-    // Inicia ou reinicia o engine com o level correto
-    const startEngine = useCallback((levelId) => {
-        setTimeout(() => {
-            gameRef.current?.reset({ onLoseLife: loseLife, onWin: win }, levelId);
-        }, 50);
-    }, [loseLife, win]);
-
     const handlePlay = useCallback((levelId) => {
         play(levelId);
-        startEngine(levelId);
-    }, [play, startEngine]);
+    }, [play]);
 
     const handleRestart = useCallback(() => {
         restart();
-        startEngine(currentLevel);
-    }, [restart, startEngine, currentLevel]);
+        // Reinicia o engine sem trocar de fase
+        setTimeout(() => {
+            gameRef.current?.reset({ onLoseLife: loseLife, onWin: win }, currentLevel);
+        }, 50)
+    }, [restart, loseLife, win, currentLevel]);
 
     const handleNext = useCallback(() => {
-        const next = currentLevel + 1;
-        play(next);
-        startEngine(next);
-    }, [play, startEngine, currentLevel]);
+        play(currentLevel + 1);
+        // GameCanvas vai remontar automaticamente pelo novo levelId
+    }, [play, currentLevel]);
 
     if (gameStatus === "menu") {
         return <MenuScreen onPlay={handlePlay} maxUnlocked={maxUnlocked} />;
