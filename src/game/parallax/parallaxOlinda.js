@@ -37,8 +37,8 @@ export const parallaxOlinda = (W) => [
                 { x: 660, w: 80, h: 125, roof: 17 },
                 { x: 745, w: 60, h: 100, roof: 14 },
             ];
-            ctx.fillStyle = "#2a1a0e";
             for (const h of houses) {
+                ctx.fillStyle = "#2a1a0e";
                 const baseY = H - h.h;
                 ctx.fillRect(tx + h.x, baseY, h.w, h.h);
                 ctx.beginPath();
@@ -46,27 +46,12 @@ export const parallaxOlinda = (W) => [
                 ctx.lineTo(tx + h.x + h.w + 4, baseY);
                 ctx.lineTo(tx + h.x + h.w / 2, baseY - h.roof);
                 ctx.fill();
-            }
-        },
-    },
-    {
-        // Janelas acesas nos casarões
-        speed: 0.42,
-        alpha: 0.35,
-        draw(ctx, tx, H) {
-            ctx.fillStyle = "#d4601a";
-            const windows = [
-                { x: 15,  y: 0.55 }, { x: 45,  y: 0.62 },
-                { x: 100, y: 0.52 }, { x: 165, y: 0.58 },
-                { x: 195, y: 0.65 }, { x: 260, y: 0.54 },
-                { x: 340, y: 0.60 }, { x: 370, y: 0.67 },
-                { x: 425, y: 0.53 }, { x: 500, y: 0.59 },
-                { x: 530, y: 0.66 }, { x: 595, y: 0.55 },
-                { x: 670, y: 0.61 }, { x: 700, y: 0.68 },
-                { x: 760, y: 0.56 },
-            ];
-            for (const w of windows) {
-                ctx.fillRect(tx + w.x, H * w.y, 10, 14);
+                // Janelas
+                ctx.fillStyle = "#d4601a";
+                ctx.fillRect(tx + h.x + 10, H - h.h + 20, 12, 16);
+                if (h.w > 70) {
+                    ctx.fillRect(tx + h.x + h.w - 22, H - h.h + 20, 12, 16);
+                }
             }
         },
     },

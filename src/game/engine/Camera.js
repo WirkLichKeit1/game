@@ -6,6 +6,18 @@ export class Camera {
         this.worldHeight = worldHeight;
         this.viewWidth = viewWidth;
         this.viewHeight = viewHeight;
+
+        // Screen shake
+        this._shakeTimer = 0;
+        this._shakeMagnitude = 0;
+        this._shakeOffsetX = 0;
+        this._shakeOffsetY = 0;
+    }
+
+    // Dispara um shake - magnitude em pixels, duration em segundos
+    shake(magnitude = 6, duration = 0.3) {
+        this._shakeMagnitude = magnitude;
+        this._shakeTimer = duration;
     }
 
     follow(target, delta) {
@@ -21,12 +33,29 @@ export class Camera {
         // Limites - câmera não sai do mundo
         this.x = Math.max(0, Math.min(this.x, this.worldWidth - this.viewWidth));
         this.y = Math.max(0, Math.min(this.y, this.worldHeight - this.viewHeight));
+
+        // Atualiza shake
+        if (this._shakeTimer > 0) {
+            this._shakeTimer -= delta;
+            const progress = this._shakeTimer > 0
+                ? this._shakeTimer / 0.3 // normaliza 0->1
+                : 0;
+            const m = this._shakeMagnitude * progress;
+            this._shakeOffsetX = (Math.random() * 2 - 1) * m;
+            this._shakeOffsetY = (Math.random() * 2 - 1) * m;
+        } else {
+            this._shakeOffsetX = 0;
+            this._shakeOffsetY = 0;
+        }
     }
 
     // Aplica o offset da câmera no ctx antes de renderizar
     begin(ctx) {
         ctx.save();
-        ctx.translate(-Math.round(this.x), -Math.round(this.y));
+        ctx.translate(
+            -Math.round(this.x) + Math.round(this._shakeOffsetX),
+            -Math.round(this.y) + Math.round(this._shakeOffsetY)
+        );
     }
 
     // Restaura o ctx depois de renderizar o mundo

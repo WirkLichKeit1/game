@@ -4,6 +4,7 @@ import { InputManager } from "./engine/InputManager";
 import { Camera }       from "./engine/Camera.js";
 import { Player }       from "./entities/Player.js";
 import { LevelManager } from "./LevelManager.js";
+import { ParticleSystem } from "./engine/ParticleSystem.js";
 
 export class Game {
     constructor(canvas, callbacks, levelId = 1) {
@@ -11,6 +12,7 @@ export class Game {
         this.ctx = canvas.getContext("2d");
         this.callbacks = callbacks;
         this.input = new InputManager();
+        this.particles = new ParticleSystem();
 
         this.levelManager = new LevelManager(levelId);
         this._applyLevel();
@@ -19,6 +21,9 @@ export class Game {
             (delta) => this.update(delta),
             ()      => this.render()
         );
+
+        // Rastreia se o player estava no chão no frame anterior (para spawn de pó)
+        this._wasOnGround = false;
     }
 
     // Carrega dados do level atual para as propriedades do jogo
@@ -40,6 +45,8 @@ export class Game {
             this.canvas.width,
             this.canvas.height
         );
+        this.particles.clear();
+        this._wasOnGround = false;
     }
 
     // Reinicia a fase (mantem ou troca o level)
@@ -60,8 +67,30 @@ export class Game {
     }
 
     update(delta) {
+        const body = this.player.body;
+        const moving = Math.abs(body.vx) > 10;
+
+        // Pó ao pular (saiu do chão)
+        if (this._wasOnGround && !body.onGround && body.vy < 0) {
+            this.particles.spawnDust(
+                body.x + body.width / 2,
+                body.y + body.height,
+                this.theme.platformTop ?? "#c4a882"
+            );
+        }
+        // Pó ao aterrissar (voltou ao chão)
+        if (!this._wasOnGround && body.onGround && moving) {
+            this.particles.spawnDust(
+                body.x + body.width / 2,
+                body.y + body.height,
+                this.theme.platformTop ?? "#c4a882"
+            );
+        }
+        this._wasOnGround = body.onGround;
+        
         this.player.update(delta, this.input, this.platforms, this.WORLD_WIDTH);
-        this.camera.follow(this.player.body, delta);
+        this.camera.follow(body, delta);
+        this.particles.update(delta);
 
         for (const enemy of this.enemies) {
             enemy.update(delta, this.platforms);
@@ -82,11 +111,24 @@ export class Game {
             const col = resolveAABB(this.player.body, enemy.body);
             if (!col) continue;
 
+            const eCX = enemy.body.x + enemy.body.width / 2;
+            const eCY = enemy.body.y + enemy.body.height / 2;
+
             if (col.axis === "y" && col.direction === "bottom" && this.player.body.vy > 0) {
+                // Pulou em cima - inimigo estoura
                 enemy.alive = false;
                 this.player.body.vy = -500;
+                this.particles.spawnEnemyPop(eCX, eCY, enemy.colorBody);
+                this.camera.shake(4, 0.15);
             } else {
+                // Tomou dano
                 this.invincible = 1.5;
+                this.particles.spawnDamageFlash(
+                    this.player.body.x + this.player.body.width / 2,
+                    this.player.body.y + this.player.body.height / 2
+                );
+                this.camera.shake(8, 0.35);
+                
                 const start = this.levelManager.playerStart;
                 this.player.body.x = start.x;
                 this.player.body.y = start.y;
@@ -99,6 +141,7 @@ export class Game {
 
     _checkFall() {
         if (this.player.body.y > this.WORLD_HEIGHT + 100) {
+            this.camera.shake(6, 0.25);
             const start = this.levelManager.playerStart;
             this.player.body.x = start.x;
             this.player.body.y = start.y;
@@ -153,6 +196,9 @@ export class Game {
         if (this.invincible <= 0 || Math.floor(this.invincible * 8) % 2 === 0) {
             this.player.render(ctx);
         }
+
+        // Partículas dentro do espaço do mundo
+        this.particles.render(ctx);
 
         this.camera.end(ctx);
 
