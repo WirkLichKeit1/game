@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "manguerun_layout";
-const ASPECT = 16 / 9; // proporção alvo
+const ASPECT = 800 / 560;
 
 function isMobile() {
     return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.useAgent)
@@ -55,9 +55,8 @@ export function useLayout() {
     // No PC sempre usa letterbox independente da preferência
     const isLandscape = !mobile || orientation === "horizontal";
 
-    // Dimensões do canvas interno (lógicas) - sempre 16:9
     const CANVAS_W = 800;
-    const CANVAS_H = Math.round(800 / ASPECT); // 450
+    const CANVAS_H = 560;
 
     // Tamanho visual do canvas na tela
     let displayW, displayH, offsetX, offsetY;
