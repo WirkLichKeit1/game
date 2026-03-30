@@ -37,7 +37,7 @@ export class AudioManager {
 
             // Nota 2 (mais aguda, logo depois)
             const osc2 = ctx.createOscillator();
-            const gain2 = createGain();
+            const gain2 = ctx.createGain();
             osc2.connect(gain2);
             gain2.connect(ctx.destination);
             osc2.type = "square";
