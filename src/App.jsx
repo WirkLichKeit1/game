@@ -4,10 +4,11 @@ import { DPad } from "./components/DPad.jsx";
 import { HUD } from "./components/HUD.jsx";
 import { MenuScreen } from "./screens/MenuScreen.jsx";
 import { useGameState } from "./hooks/useGameState.js";
-
+import { useLayout } from "./hooks/useLayout";
 
 export default function App() {
     const gameRef = useRef(null);
+    const layout = useLayout();
 
     const {
         lives, gameStatus, currentLevel, maxUnlocked, hasNext, loseLife, win, play, restart, goToMenu,
@@ -31,7 +32,13 @@ export default function App() {
     }, [play, currentLevel]);
 
     if (gameStatus === "menu") {
-        return <MenuScreen onPlay={handlePlay} maxUnlocked={maxUnlocked} />;
+        return (
+            <MenuScreen
+                onPlay={handlePlay}
+                maxUnlocked={maxUnlocked}
+                layout={layout}
+            />
+        );
     }
     
     return (
@@ -48,6 +55,7 @@ export default function App() {
                 onWin={win}
                 paused={gameStatus !== "playing"}
                 levelId={currentLevel}
+                layout={layout}
             />
             <HUD
                 lives={lives}
@@ -57,7 +65,9 @@ export default function App() {
                 onNext={handleNext}
                 hasNext={hasNext}
             />
-            {gameStatus === "playing" && <DPad gameRef={gameRef} />}
+            {gameStatus === "playing" && (
+                <DPad gameRef={gameRef} isLandscape={layout.isLandscape} />
+            )}
         </div>
     );
 }

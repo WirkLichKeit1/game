@@ -6,7 +6,7 @@ const PHASE_DATA = [
     { id: 3, label: "FASE 3", sublabel: "OLINDA ALTA"   },
 ];
 
-export function MenuScreen({ onPlay, maxUnlocked }) {
+export function MenuScreen({ onPlay, maxUnlocked, layout }) {
     const [selectedPhase, setSelectedPhase] = useState(1);
     const [showCredits,   setShowCredits]   = useState(false);
     const [blink,         setBlink]         = useState(true);
@@ -91,6 +91,33 @@ export function MenuScreen({ onPlay, maxUnlocked }) {
                     </div>
                 </div>
 
+                {/* Toggle de orientação — só aparece no mobile */}
+                {layout.mobile && (
+                    <div style={s.orientRow}>
+                        <p style={s.orientLabel}>ORIENTAÇÃO</p>
+                        <div style={s.orientBtns}>
+                            <button
+                                style={{
+                                    ...s.orientBtn,
+                                    ...(layout.orientation === "vertical" ? s.orientBtnOn : {}),
+                                }}
+                                onClick={() => layout.setOrientation("vertical")}
+                            >
+                                ↕ VERTICAL
+                            </button>
+                            <button
+                                style={{
+                                    ...s.orientBtn,
+                                    ...(layout.orientation === "horizontal" ? s.orientBtnOn : {}),
+                                }}
+                                onClick={() => layout.setOrientation("horizontal")}
+                            >
+                                ↔ HORIZONTAL
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <button style={s.playBtn} onClick={() => onPlay(selectedPhase)}>
                     {blink ? "▸  JOGAR  ◂" : "   JOGAR   "}
                 </button>
@@ -109,17 +136,11 @@ export function MenuScreen({ onPlay, maxUnlocked }) {
     );
 }
 
-/* ─── Cena de fundo ─── */
 function BgScene({ stars }) {
     const palms = [6, 20, 38, 58, 74, 88];
     return (
         <div style={s.bgWrap}>
-            <style>{`
-                @keyframes twinkle {
-                    0%,100% { opacity:.15 }
-                    50%     { opacity:.7  }
-                }
-            `}</style>
+            <style>{`@keyframes twinkle { 0%,100%{opacity:.15} 50%{opacity:.7} }`}</style>
             <div style={s.sky} />
             <div style={s.moon} />
             {stars.map((st, i) => (
@@ -175,11 +196,11 @@ const s = {
     ground:{ position:"absolute", bottom:0, left:0, right:0, height:38, background:C.ground },
     groundLine:{ position:"absolute", bottom:36, left:0, right:0, height:2, background:C.gline },
     scanlines:{ position:"absolute", inset:0, pointerEvents:"none", zIndex:10, background:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)" },
-    layout:{ position:"relative", zIndex:2, display:"flex", flexDirection:"column", alignItems:"center", gap:18, padding:"24px 20px 18px", width:"100%", maxWidth:380 },
-    logoBox:{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"18px 28px 14px", border:`1px solid ${C.border}`, background:"rgba(10,20,15,0.55)", width:"100%", boxSizing:"border-box" },
-    logoIcon:{ fontSize:28, lineHeight:1, marginBottom:2 },
+    layout:{ position:"relative", zIndex:2, display:"flex", flexDirection:"column", alignItems:"center", gap:16, padding:"20px 20px 16px", width:"100%", maxWidth:380 },
+    logoBox:{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"14px 28px 12px", border:`1px solid ${C.border}`, background:"rgba(10,20,15,0.55)", width:"100%", boxSizing:"border-box" },
+    logoIcon:{ fontSize:26, lineHeight:1, marginBottom:2 },
     logoSub:{ margin:0, fontSize:9, color:C.muted, letterSpacing:"0.22em", fontFamily:FONT },
-    title:{ margin:"6px 0 4px", fontSize:40, fontWeight:"bold", lineHeight:1.1, textAlign:"center", letterSpacing:"0.08em", color:C.text, textShadow:"1px 1px 0 #000", fontFamily:FONT },
+    title:{ margin:"4px 0 2px", fontSize:38, fontWeight:"bold", lineHeight:1.1, textAlign:"center", letterSpacing:"0.08em", color:C.text, textShadow:"1px 1px 0 #000", fontFamily:FONT },
     section:{ width:"100%" },
     label:{ margin:"0 0 8px", fontSize:10, color:C.muted, letterSpacing:"0.18em", textAlign:"center", fontFamily:FONT },
     phaseRow:{ display:"flex", gap:8, width:"100%" },
@@ -190,7 +211,15 @@ const s = {
     phaseNum:{ fontSize:18, fontWeight:"bold", color:C.accent, lineHeight:1 },
     phaseName:{ fontSize:11, color:C.text, letterSpacing:"0.08em" },
     phaseLoc:{ fontSize:8, letterSpacing:"0.1em" },
-    playBtn:{ width:"100%", padding:"15px 0", background:"rgba(10,20,15,0.6)", border:`1px solid ${C.accent}`, color:C.accent, fontSize:20, fontWeight:"bold", fontFamily:FONT, cursor:"pointer", letterSpacing:"0.12em" },
+
+    // Orientação
+    orientRow:{ width:"100%", display:"flex", flexDirection:"column", gap:6 },
+    orientLabel:{ margin:0, fontSize:10, color:C.muted, letterSpacing:"0.18em", textAlign:"center", fontFamily:FONT },
+    orientBtns:{ display:"flex", gap:8 },
+    orientBtn:{ flex:1, padding:"8px 0", background:"rgba(10,20,15,0.5)", border:`1px solid ${C.border}`, color:C.muted, fontSize:10, fontFamily:FONT, cursor:"pointer", letterSpacing:"0.1em" },
+    orientBtnOn:{ border:`1px solid ${C.accent}`, color:C.accent, background:"rgba(122,184,144,0.07)" },
+
+    playBtn:{ width:"100%", padding:"14px 0", background:"rgba(10,20,15,0.6)", border:`1px solid ${C.accent}`, color:C.accent, fontSize:20, fontWeight:"bold", fontFamily:FONT, cursor:"pointer", letterSpacing:"0.12em" },
     footer:{ display:"flex", alignItems:"center", gap:10, fontFamily:FONT },
     ghostBtn:{ background:"none", border:"none", color:C.muted, fontSize:10, fontFamily:FONT, cursor:"pointer", letterSpacing:"0.12em", padding:0 },
     dot:{ color:C.border, fontSize:10 },
