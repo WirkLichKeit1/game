@@ -8,7 +8,7 @@ const STORAGE_KEY = "manguerun_layout";
 const ASPECT = 800 / 560;
 
 function isMobile() {
-    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.useAgent)
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
         || window.innerWidth <= 900;
 }
 
