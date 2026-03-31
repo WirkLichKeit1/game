@@ -11,7 +11,7 @@ export default function App() {
     const layout = useLayout();
 
     const {
-        lives, gameStatus, currentLevel, maxUnlocked, hasNext, loseLife, win, play, restart, goToMenu,
+        lives, hp, flags, gameStatus, currentLevel, maxUnlocked, hasNext, takeDamage, loseLife, collectFlag, setFlagTotal, win, play, restart, goToMenu,
     } = useGameState();
 
     const handlePlay = useCallback((levelId) => {
@@ -59,6 +59,8 @@ export default function App() {
             />
             <HUD
                 lives={lives}
+                hp={hp}
+                flags={flags}
                 gameStatus={gameStatus}
                 onRestart={handleRestart}
                 onMenu={goToMenu}

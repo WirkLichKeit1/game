@@ -5,6 +5,8 @@ import { level2 } from "./levels/level2.js";
 import { level3 } from "./levels/level3.js";
 import { Platform } from "./entities/Platform.js";
 import { Enemy } from "./entities/Enemy.js";
+import { Flag } from "./entities/Flag.js";
+import { Boss } from "./entities/Boss.js";
 import { parallaxBeach } from "./parallax/parallaxBeach.js";
 import { parallaxMangrove } from "./parallax/parallaxMangrove.js";
 import { parallaxOlinda } from "./parallax/parallaxOlinda.js";
@@ -30,18 +32,63 @@ export class LevelManager {
         this.worldHeight = data.worldHeight;
         this.flagX       = data.flagX;
         this.playerStart = data.playerStart;
+        this.isBossLevel = data.isBossLevel ?? false;
 
-        // Constrói plataformas a partir dos dados crus
+        // plataformas
         this.platforms = data.platforms.map(
             (p) => new Platform(p.x, p.y, p.w, p.h, data.theme)
         );
 
-        // Constrói inimigos - level3 tem speed customizada por inimigo
-        this.enemies = data.enemies.map(
-            (e) => new Enemy(e.x, e.y, e.left, e.right, e.speed ?? 100, data.theme)
-        );
+        // inimigos
+        this.enemies = [];
+        if (data.enemies) {
+            for (const e of data.enemies) {
+                const config = {
+                    patrolLeft: e.left,
+                    patrolRight: e.right,
+                    speed: e.speed ?? 100,
+                    jumpCooldown: e.jumpCooldown ?? 2,
+                    jumpForce: e.jumpForce ?? -600,
+                    shootCooldown: e.shootCooldown ?? 2.5,
+                    detectionRange: e.detectionRange ?? 300,
+                    colorBody: data.theme.enemy,
+                    colorHead: data.theme.enemyHead,
+                    theme: data.theme,
+                };
+                const enemy = new Enemy(e.x, e.y, e.type || "patrol", config);
+                this.enemies.push(enemy);
+            }
+        }
 
+        // Bandeiras coletáveis
+        this.flags = [];
+        if (data.flags) {
+            for (const f of data.flags) {
+                const flag = new Flag(f.x, f.y, f.id, data.theme);
+                this.flags.push(flag);
+            }
+        }
+
+        // Boss
+        this.boss = null;
+        if (data.boss) {
+            this.boss = new Boss(data.boss.x, data.boss.y, data.theme);
+            this.bossSpawned = false; // Controla quando o boss aparece
+        }
+
+        // Parallax
         const buildParallax = PARALLAX[levelId];
         this.parallax = buildParallax ? buildParallax(viewWidth) : [];
+    }
+
+    // Verifica se todas as bandeiras foram coletadas
+    allFlagsCollected() {
+        return this.flags.length > 0 && this.flags.every(f => f.collected);
+    }
+
+    // Retorna número de bandeiras coletadas
+    getFlagProgress() {
+        const collected = this.flags.filter(f => f.collected).length;
+        return { collected, total: this.flags.length };
     }
 }

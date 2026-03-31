@@ -1,5 +1,3 @@
-[🇺🇸 Read in English](README.en.md)
-
 # 🦀 Mangue Run
 
 Um jogo de plataforma 2D com rolagem lateral rodando no navegador, construído com **React 19** e um **motor de jogo personalizado em Canvas** escrito do zero em JavaScript puro. Inspirado na cultura mangue beat e no povo de Pernambuco.
