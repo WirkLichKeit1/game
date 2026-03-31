@@ -75,7 +75,7 @@ export function DPad({ gameRef, isLandscape }) {
                 <Btn label="◀" action="left" />
                 <Btn label="▶" action="right" />
             </div>
-            <div style={{ pointerEvents: "All "}}>
+            <div style={{ pointerEvents: "all" }}>
                 <Btn label="▲" action="jump"/>
             </div>
         </div>

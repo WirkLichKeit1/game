@@ -28,6 +28,9 @@ export class Game {
 
         // Mensagens temporárias na tela
         this.messages = [];
+
+        // Inicializar variável bossDefeated
+        this.bossDefeated = false;
     }
 
     _applyLevel() {
@@ -37,6 +40,7 @@ export class Game {
         this.flags = lm.flags;
         this.boss = lm.boss;
         this.bossActive = false; // Boss só aparece após coletar bandeiras
+        this.bossDefeated = false; // Reset ao trocar de fase
         this.flagX = lm.flagX;
         this.theme = lm.theme;
         this.parallax = lm.parallax;
@@ -67,6 +71,7 @@ export class Game {
         }
         this._applyLevel();
         this.bossActive = false;
+        this.bossDefeated = false; // Reset no restart
         this.messages = [];
     }
 

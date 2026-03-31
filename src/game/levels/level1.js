@@ -87,20 +87,20 @@ export const level1 = {
         { x: 4700, y: 500, w: 200, h: 60 },
 
         // ══════ CAMINHO INFERIOR (x: 1400-4500) ══════
-        // Área "subterrânea" mais abaixo
-        { x: 1400, y: 540, w: 300, h: 20 }, // Primeira plataforma após queda
-        { x: 1750, y: 540, w: 280, h: 20 },
-        { x: 2080, y: 540, w: 300, h: 20 },
-        { x: 2430, y: 540, w: 280, h: 20 },
-        { x: 2760, y: 540, w: 300, h: 20 },
-        { x: 3110, y: 540, w: 280, h: 20 },
-        { x: 3440, y: 540, w: 300, h: 20 },
-        { x: 3790, y: 540, w: 280, h: 20 },
-        { x: 4120, y: 540, w: 300, h: 20 },
+        // Área "subterrânea" mais abaixo - CORRIGIDO: y:520 em vez de 540
+        { x: 1400, y: 520, w: 300, h: 20 }, // Primeira plataforma após queda
+        { x: 1750, y: 520, w: 280, h: 20 },
+        { x: 2080, y: 520, w: 300, h: 20 },
+        { x: 2430, y: 520, w: 280, h: 20 },
+        { x: 2760, y: 520, w: 300, h: 20 },
+        { x: 3110, y: 520, w: 280, h: 20 },
+        { x: 3440, y: 520, w: 300, h: 20 },
+        { x: 3790, y: 520, w: 280, h: 20 },
+        { x: 4120, y: 520, w: 300, h: 20 },
         // Bandeira 3 no caminho inferior
-        { x: 4470, y: 540, w: 200, h: 20 },
+        { x: 4470, y: 520, w: 200, h: 20 },
         // Subida de volta
-        { x: 4700, y: 520, w: 150, h: 20 },
+        { x: 4700, y: 510, w: 150, h: 20 },
         { x: 4870, y: 500, w: 150, h: 20 },
 
         // ══════ REUNIFICAÇÃO (x: 4800-5500) ══════
@@ -162,16 +162,16 @@ export const level1 = {
         { x: 4100, y: 450, type: "jumper", left: 3960, right: 4290, speed: 95, jumpCooldown: 2 },
         { x: 4450, y: 450, type: "shooter", left: 4360, right: 4640, speed: 80, shootCooldown: 2.5 },
 
-        // Caminho Inferior - patrol rápidos
-        { x: 1550, y: 490, type: "patrol", left: 1410, right: 1690, speed: 130 },
-        { x: 1900, y: 490, type: "patrol", left: 1760, right: 2020, speed: 130 },
-        { x: 2250, y: 490, type: "patrol", left: 2090, right: 2370, speed: 130 },
-        { x: 2600, y: 490, type: "patrol", left: 2440, right: 2700, speed: 130 },
-        { x: 2950, y: 490, type: "patrol", left: 2770, right: 3050, speed: 130 },
-        { x: 3300, y: 490, type: "patrol", left: 3120, right: 3380, speed: 130 },
-        { x: 3650, y: 490, type: "patrol", left: 3450, right: 3730, speed: 130 },
-        { x: 4000, y: 490, type: "patrol", left: 3800, right: 4110, speed: 130 },
-        { x: 4300, y: 490, type: "patrol", left: 4130, right: 4410, speed: 130 },
+        // Caminho Inferior - patrol rápidos - CORRIGIDO: y:470 em vez de 490
+        { x: 1550, y: 470, type: "patrol", left: 1410, right: 1690, speed: 130 },
+        { x: 1900, y: 470, type: "patrol", left: 1760, right: 2020, speed: 130 },
+        { x: 2250, y: 470, type: "patrol", left: 2090, right: 2370, speed: 130 },
+        { x: 2600, y: 470, type: "patrol", left: 2440, right: 2700, speed: 130 },
+        { x: 2950, y: 470, type: "patrol", left: 2770, right: 3050, speed: 130 },
+        { x: 3300, y: 470, type: "patrol", left: 3120, right: 3380, speed: 130 },
+        { x: 3650, y: 470, type: "patrol", left: 3450, right: 3730, speed: 130 },
+        { x: 4000, y: 470, type: "patrol", left: 3800, right: 4110, speed: 130 },
+        { x: 4300, y: 470, type: "patrol", left: 4130, right: 4410, speed: 130 },
 
         // Caminho ao boss - mais difícil
         { x: 5700, y: 450, type: "shooter", left: 5560, right: 5840, speed: 85, shootCooldown: 2 },
@@ -184,11 +184,11 @@ export const level1 = {
         { x: 8000, y: 430, type: "jumper", left: 7860, right: 8140, speed: 100, jumpCooldown: 2 },
     ],
 
-    // Bandeiras coletáveis
+    // Bandeiras coletáveis - CORRIGIDO: posições ajustadas para ficarem nas plataformas
     flags: [
-        { id: 1, x: 4050, y: 280 },  // Fim do caminho superior
-        { id: 2, x: 4730, y: 440 },  // Fim do caminho médio
-        { id: 3, x: 4500, y: 180 },  // Fim do caminho inferior
+        { id: 1, x: 4050, y: 260 },  // Fim do caminho superior (plataforma em y:340)
+        { id: 2, x: 4730, y: 420 },  // Fim do caminho médio (plataforma em y:500)
+        { id: 3, x: 4500, y: 440 },  // Fim do caminho inferior (plataforma em y:520)
     ],
 
     // Boss aparece após coletar todas as bandeiras
