@@ -1,4 +1,4 @@
-export function HUD({ lives, hp, flags, gameStatus, onRestart, onMenu, onNext, hasNext }) {
+export function HUD({ lives, hp, flags, gameStatus, onRestart, onMenu, onNext, hasNext, isLandscape }) {
 
     if (gameStatus === "dead") {
         return (
@@ -34,10 +34,10 @@ export function HUD({ lives, hp, flags, gameStatus, onRestart, onMenu, onNext, h
         );
     }
 
-    // HUD de jogo expandido
+    // HUD de jogo — tudo no topo, longe do D-Pad
     return (
         <>
-            {/* Painel superior esquerdo - Vida e HP */}
+            {/* Painel superior esquerdo — Vidas + HP */}
             <div style={{
                 position:"fixed", top:12, left:12,
                 display:"flex", flexDirection:"column", gap:6,
@@ -45,12 +45,13 @@ export function HUD({ lives, hp, flags, gameStatus, onRestart, onMenu, onNext, h
                 padding:"10px 14px",
                 borderRadius:4,
                 border:"1px solid rgba(255,255,255,0.15)",
+                zIndex:30,
             }}>
                 {/* Corações */}
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     {[0,1,2].map(i => (
-                        <span key={i} style={{ 
-                            fontSize:20, 
+                        <span key={i} style={{
+                            fontSize:20,
                             opacity: i < lives ? 1 : 0.2,
                             filter: i < lives ? "none" : "grayscale(100%)",
                         }}>
@@ -69,26 +70,23 @@ export function HUD({ lives, hp, flags, gameStatus, onRestart, onMenu, onNext, h
                     overflow:"hidden",
                     position:"relative",
                 }}>
-                    {/* HP atual */}
                     <div style={{
                         position:"absolute",
                         top:0, left:0, bottom:0,
                         width:`${hp}%`,
-                        background: hp > 66 ? "linear-gradient(90deg, #4ade80 0%, #22c55e 100%)" :
-                                   hp > 33 ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)" :
-                                            "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)",
+                        background: hp > 66
+                            ? "linear-gradient(90deg, #4ade80 0%, #22c55e 100%)"
+                            : hp > 33
+                                ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)"
+                                : "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)",
                         transition:"width 0.3s ease, background 0.3s ease",
                     }} />
-
-                    {/* Brilho */}
                     <div style={{
                         position:"absolute",
                         top:0, left:0, right:0,
                         height:"40%",
                         background:"rgba(255,255,255,0.2)",
                     }} />
-
-                    {/* Texto HP */}
                     <div style={{
                         position:"absolute",
                         inset:0,
@@ -106,45 +104,48 @@ export function HUD({ lives, hp, flags, gameStatus, onRestart, onMenu, onNext, h
                 </div>
             </div>
 
-            {/* Painel superior direito - Bandeiras */}
-            {flags.total > 0 && (
-                <div style={{
-                    position:"fixed", top:12, right:12,
-                    display:"flex", alignItems:"center", gap:10,
-                    background:"rgba(0,0,0,0.7)",
-                    padding:"10px 16px",
-                    borderRadius:4,
-                    border:"1px solid rgba(255,255,255,0.15)",
-                }}>
-                    <span style={{ fontSize:24 }}>🚩</span>
-                    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                        <span style={{ 
-                            color:"#f5c518", 
-                            fontSize:14, 
-                            fontWeight:"bold",
-                            fontFamily:FONT,
-                        }}>
-                            {flags.collected}/{flags.total}
-                        </span>
-                        <span style={{ 
-                            color:"rgba(255,255,255,0.6)", 
-                            fontSize:9,
-                            fontFamily:FONT,
-                            letterSpacing:"0.08em",
-                        }}>
-                            {flags.collected === flags.total ? "COMPLETO!" : "BANDEIRAS"}
-                        </span>
+            {/* Painel superior direito — Bandeiras + botão Menu */}
+            <div style={{
+                position:"fixed", top:12, right:12,
+                display:"flex", alignItems:"center", gap:8,
+                zIndex:30,
+            }}>
+                {/* Bandeiras */}
+                {flags.total > 0 && (
+                    <div style={{
+                        display:"flex", alignItems:"center", gap:10,
+                        background:"rgba(0,0,0,0.7)",
+                        padding:"10px 16px",
+                        borderRadius:4,
+                        border:"1px solid rgba(255,255,255,0.15)",
+                    }}>
+                        <span style={{ fontSize:22 }}>🚩</span>
+                        <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                            <span style={{
+                                color:"#f5c518",
+                                fontSize:14,
+                                fontWeight:"bold",
+                                fontFamily:FONT,
+                            }}>
+                                {flags.collected}/{flags.total}
+                            </span>
+                            <span style={{
+                                color:"rgba(255,255,255,0.6)",
+                                fontSize:9,
+                                fontFamily:FONT,
+                                letterSpacing:"0.08em",
+                            }}>
+                                {flags.collected === flags.total ? "COMPLETO!" : "BANDEIRAS"}
+                            </span>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Botão Menu */}
-            <button style={{
-                position:"fixed", bottom:16, left:16,
-                ...menuBtn
-            }} onClick={onMenu}>
-                ☰ MENU
-            </button>
+                {/* Botão Menu — sempre no topo, nunca sobre o D-Pad */}
+                <button style={menuBtn} onClick={onMenu}>
+                    ☰
+                </button>
+            </div>
         </>
     );
 }
@@ -180,6 +181,7 @@ const overlay = bg => ({
     alignItems:"center", justifyContent:"center",
     gap:24,
     fontFamily:FONT,
+    zIndex:50,
 });
 
 const btnRow = {
@@ -191,9 +193,8 @@ const menuBtn = {
     border:"1px solid rgba(255,255,255,0.15)",
     borderRadius:4,
     color:"rgba(255,255,255,0.8)",
-    fontSize:12,
-    padding:"8px 16px",
+    fontSize:16,
+    padding:"8px 12px",
     cursor:"pointer",
     fontFamily:FONT,
-    letterSpacing:"0.08em",
 };

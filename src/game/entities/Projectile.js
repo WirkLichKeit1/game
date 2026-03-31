@@ -28,18 +28,22 @@ export class Projectile {
         this.trail.push({
             x: this.body.x + this.body.width / 2,
             y: this.body.y + this.body.height / 2,
-            life: 0.3,
+            life: 0.25,
         });
-        if (this.trail.length > 0) this.trail.shift();
+
+        // Mantém no máximo 8 pontos de rastro
+        if (this.trail.length > 8) this.trail.shift();
 
         // Atualiza trail
         for (const t of this.trail) {
-            t.life -= delta * 2;
+            t.life -= delta * 3;
         }
         this.trail = this.trail.filter(t => t.life > 0);
 
-        this.body.update(delta);
-
+        // Mover manualmente sem chamar PhysicsBody.update() que aplica GRAVITY
+        this.body.x += this.body.vx * delta;
+        this.body.y += this.body.vy * delta;
+        
         // Desaparece se sair do mundo
         if (this.body.x < -50 || this.body.x > worldWidth + 50 || this.body.y < -50 || this.body.y > worldHeight + 50) {
             this.alive = false;
@@ -50,9 +54,8 @@ export class Projectile {
         if (!this.alive) return;
 
         // Renderiza trail
-        for (let i = 0; i < this.trail.length; i++) {
-            const t = this.trail[i];
-            const alpha = t.life / 0.3;
+        for (const t of this.trail) {
+            const alpha = Math.max(0, t.life / 0.25);
             const size = 6 * alpha;
             ctx.save();
             ctx.globalAlpha = alpha * 0.6;

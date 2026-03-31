@@ -9,6 +9,7 @@ export class Camera {
 
         // Screen shake
         this._shakeTimer = 0;
+        this._shakeDuration = 0;
         this._shakeMagnitude = 0;
         this._shakeOffsetX = 0;
         this._shakeOffsetY = 0;
@@ -18,6 +19,7 @@ export class Camera {
     shake(magnitude = 6, duration = 0.3) {
         this._shakeMagnitude = magnitude;
         this._shakeTimer = duration;
+        this._shakeDuration = duration;
     }
 
     follow(target, delta) {
@@ -37,8 +39,8 @@ export class Camera {
         // Atualiza shake
         if (this._shakeTimer > 0) {
             this._shakeTimer -= delta;
-            const progress = this._shakeTimer > 0
-                ? this._shakeTimer / 0.3 // normaliza 0->1
+            const progress = this._shakeDuration > 0
+                ? Math.max(0, this._shakeTimer / this._shakeDuration)
                 : 0;
             const m = this._shakeMagnitude * progress;
             this._shakeOffsetX = (Math.random() * 2 - 1) * m;

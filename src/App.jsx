@@ -14,17 +14,31 @@ export default function App() {
         lives, hp, flags, gameStatus, currentLevel, maxUnlocked, hasNext, takeDamage, loseLife, collectFlag, setFlagTotal, win, play, restart, goToMenu,
     } = useGameState();
 
+    const callbacks = {
+        onLoseLife: loseLife,
+        onWin: win,
+        takeDamage,
+        collectFlag,
+        setFlagTotal,
+    };
+
     const handlePlay = useCallback((levelId) => {
         play(levelId);
     }, [play]);
 
     const handleRestart = useCallback(() => {
         restart();
-        // Reinicia o engine sem trocar de fase
+        // Reset síncrono - com setTimeout frágil
         setTimeout(() => {
-            gameRef.current?.reset({ onLoseLife: loseLife, onWin: win }, currentLevel);
+            gameRef.current?.reset({
+                onLoseLife: loseLife,
+                onWin: win,
+                takeDamage,
+                collectFlag,
+                setFlagTotal,
+            }, currentLevel);
         }, 50)
-    }, [restart, loseLife, win, currentLevel]);
+    }, [restart, loseLife, win, takeDamage, collectFlag, setFlagTotal, currentLevel]);
 
     const handleNext = useCallback(() => {
         play(currentLevel + 1);
@@ -51,8 +65,7 @@ export default function App() {
         }}>
             <GameCanvas
                 gameRef={gameRef}
-                onLoseLife={loseLife}
-                onWin={win}
+                callbacks={callbacks}
                 paused={gameStatus !== "playing"}
                 levelId={currentLevel}
                 layout={layout}
@@ -66,6 +79,7 @@ export default function App() {
                 onMenu={goToMenu}
                 onNext={handleNext}
                 hasNext={hasNext}
+                isLandscape={layout.isLandscape}
             />
             {gameStatus === "playing" && (
                 <DPad gameRef={gameRef} isLandscape={layout.isLandscape} />

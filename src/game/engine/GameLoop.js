@@ -8,20 +8,26 @@ export class GameLoop {
     }
 
     start() {
+        if (this.running) return;
         this.running = true;
+        this.lastTime = 0;
         this.rafId = requestAnimationFrame((t) => this.loop(t));
     }
 
     stop() {
         this.running = false;
         if (this.rafId) cancelAnimationFrame(this.rafId);
+        this.rafId = null;
     }
 
     loop(timestamp) {
         if (!this.running) return;
 
-        // Delta em segundos - garante velocidade consistente em qualquer dispositivo
-        const delta = Math.min((timestamp - this.lastTime) / 1000, 0.05);
+        // Se lastTime for 0 (primeiro frame após start), delta = 0 para evitar salto
+        const delta = this.lastTime === 0
+            ? 0
+            : Math.min((timestamp - this.lastTime) / 1000, 0.05);
+        
         this.lastTime = timestamp;
 
         this.update(delta);
