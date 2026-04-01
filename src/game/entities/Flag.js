@@ -4,6 +4,7 @@ export class Flag {
         this.y = y;
         this.id = id; // Identificador único da bandeira
         this.collected = false;
+        this.hidden = false; // se true, não aparece nem colide até ser revelada
         this.color = theme.flag || "#f1c40f";
         this.poleColor = "#888";
 
@@ -11,6 +12,10 @@ export class Flag {
         this.floatTimer = Math.random() * Math.PI * 2;
         this.floatSpeed = 2;
         this.floatAmount = 6;
+
+        // Animação de revelação (fade-in quando hidden passa a false)
+        this.revealAlpha = 1.0; // 0->1 quando revelada
+        this.revealing = false;
 
         // Área de coleta (hitbox maior que visual)
         this.hitbox = {
@@ -21,13 +26,25 @@ export class Flag {
         };
     }
 
+    reveal() {
+        if (!this.hidden) return;
+        this.hidden = false;
+        this.revealing = true;
+        this.revealAlpha = 0;
+    }
+
     update(delta) {
         if (this.collected) return;
         this.floatTimer += delta * this.floatSpeed;
+
+        if (this.revealing) {
+            this.revealAlpha = Math.min(1, this.revealAlpha + delta * 2);
+            if (this.revealAlpha >= 1) this.revealing = false;
+        }
     }
 
     checkCollection(playerBody) {
-        if (this.collected) return false;
+        if (this.collected || this.hidden) return false;
 
         const px = playerBody.x;
         const py = playerBody.y;
@@ -45,20 +62,22 @@ export class Flag {
     }
 
     render(ctx) {
-        if (this.collected) return;
+        if (this.collected || this.hidden) return;
 
         const floatOffset = Math.sin(this.floatTimer) * this.floatAmount;
         const baseY = this.y + floatOffset;
 
         ctx.save();
+        ctx.globalAlpha = this.revealAlpha;
 
         // Brilho de fundo se não coletada
-        ctx.globalAlpha = 0.15 + Math.sin(this.floatTimer * 2) * 0.1;
+        ctx.globalAlpha = this.revealAlpha * (0.15 + Math.sin(this.floatTimer * 2) * 0.1);
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x + 25, baseY + 80, 35, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
+        
+        ctx.globalAlpha = this.globalAlpha;
 
         // Poste
         ctx.fillStyle = this.poleColor;

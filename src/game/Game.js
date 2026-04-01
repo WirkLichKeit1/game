@@ -1,23 +1,25 @@
-import { resolveAABB }    from "./physics/AABB.js";
-import { GameLoop }        from "./engine/GameLoop.js";
-import { InputManager }    from "./engine/InputManager";
-import { Camera }          from "./engine/Camera.js";
-import { Player }          from "./entities/Player.js";
-import { LevelManager }    from "./LevelManager.js";
-import { ParticleSystem }  from "./engine/ParticleSystem.js";
-import { AudioManager }    from "./engine/AudioManager.js";
+import { resolveAABB }   from "./physics/AABB.js";
+import { GameLoop }       from "./engine/GameLoop.js";
+import { InputManager }   from "./engine/InputManager";
+import { Camera }         from "./engine/Camera.js";
+import { Player }         from "./entities/Player.js";
+import { ZoneManager }    from "./ZoneManager.js";
+import { ParticleSystem } from "./engine/ParticleSystem.js";
+import { AudioManager }   from "./engine/AudioManager.js";
 
 export class Game {
     constructor(canvas, callbacks, levelId = 1) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext("2d");
+        this.canvas    = canvas;
+        this.ctx       = canvas.getContext("2d");
         this.callbacks = callbacks;
-        this.input = new InputManager();
-        this.particles = new ParticleSystem();
-        this.audio = new AudioManager();
 
-        this.levelManager = new LevelManager(levelId);
-        this._applyLevel();
+        this.input     = new InputManager();
+        this.particles = new ParticleSystem();
+        this.audio     = new AudioManager();
+
+        this.zoneManager = new ZoneManager(canvas.width, canvas.height);
+
+        this._initFromZone();
 
         this.loop = new GameLoop(
             (delta) => this.update(delta),
@@ -25,50 +27,32 @@ export class Game {
         );
 
         this._wasOnGround = false;
-        this.messages = [];
+        this.messages     = [];
         this.bossDefeated = false;
+        this.bossActive   = false;
+        this.bossSpawned  = false;
     }
 
-    _applyLevel() {
-        const lm = this.levelManager;
-        this.platforms   = lm.platforms;
-        this.enemies     = lm.enemies;
-        this.flags       = lm.flags;
-        this.boss        = lm.boss;
-        this.bossActive  = false;
-        this.bossDefeated = false;
-        this.flagX       = lm.flagX;
-        this.theme       = lm.theme;
-        this.parallax    = lm.parallax;
-        this.WORLD_WIDTH  = lm.worldWidth;
-        this.WORLD_HEIGHT = lm.worldHeight;
-
-        this.player     = new Player(lm.playerStart.x, lm.playerStart.y);
+    _initFromZone() {
+        const zm = this.zoneManager;
+        this.player     = new Player(zm.playerStart.x, zm.playerStart.y);
         this.invincible = 0;
-        this.camera     = new Camera(
-            this.WORLD_WIDTH,
-            this.WORLD_HEIGHT,
-            this.canvas.width,
-            this.canvas.height
-        );
+        this.camera     = new Camera(zm.worldWidth, zm.worldHeight, this.canvas.width, this.canvas.height);
         this.particles.clear();
         this._wasOnGround = false;
 
-        // Informa o total de bandeiras ao HUD
-        if (this.callbacks.setFlagTotal) {
-            this.callbacks.setFlagTotal(this.flags.length);
-        }
+        const { total } = zm.getFlagProgress();
+        if (this.callbacks.setFlagTotal) this.callbacks.setFlagTotal(total);
     }
 
     reset(callbacks, levelId) {
         this.callbacks = { ...this.callbacks, ...callbacks };
-        if (levelId !== undefined) {
-            this.levelManager.load(levelId, this.canvas.width);
-        }
-        this._applyLevel();
-        this.bossActive  = false;
+        this.zoneManager.resetAll();
+        this._initFromZone();
+        this.bossActive   = false;
         this.bossDefeated = false;
-        this.messages    = [];
+        this.bossSpawned  = false;
+        this.messages     = [];
     }
 
     start()   { this.loop.start(); }
@@ -80,55 +64,63 @@ export class Game {
     }
 
     update(delta) {
+        const zm     = this.zoneManager;
         const body   = this.player.body;
         const moving = Math.abs(body.vx) > 10;
 
-        // Pó ao pular / aterrissar
         if (this._wasOnGround && !body.onGround && body.vy < 0) {
-            this.particles.spawnDust(body.x + body.width / 2, body.y + body.height, this.theme.platformTop ?? "#c4a882");
+            this.particles.spawnDust(body.x + body.width / 2, body.y + body.height, zm.theme.platformTop ?? "#c4a882");
             this.audio.jump();
         }
         if (!this._wasOnGround && body.onGround && moving) {
-            this.particles.spawnDust(body.x + body.width / 2, body.y + body.height, this.theme.platformTop ?? "#c4a882");
+            this.particles.spawnDust(body.x + body.width / 2, body.y + body.height, zm.theme.platformTop ?? "#c4a882");
         }
         this._wasOnGround = body.onGround;
 
-        this.player.update(delta, this.input, this.platforms, this.WORLD_WIDTH);
+        // Opacidade dinâmica das plataformas (efeito de descoberta no céu)
+        for (const platform of zm.platforms) {
+            platform.updateOpacity(body.x + body.width / 2, body.y + body.height / 2);
+        }
+
+        this.player.update(delta, this.input, zm.platforms, zm.worldWidth);
         this.camera.follow(body, delta);
         this.particles.update(delta);
 
         const playerPos = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
 
-        for (const enemy of this.enemies) {
-            enemy.update(delta, this.platforms, playerPos);
+        for (const enemy of zm.enemies) {
+            enemy.update(delta, zm.platforms, playerPos);
         }
 
-        // Bandeiras coletáveis
-        for (const flag of this.flags) {
-            flag.update(delta);
+        // Revela bandeira quando todos os inimigos da zona lateral morrem
+        if (zm.activeId !== "mid" && zm.allEnemiesDefeated()) {
+            for (const flag of zm.active.flags) {
+                if (flag.hidden) flag.reveal();
+            }
+        }
 
+        // Bandeiras
+        for (const flag of zm.active.flags) {
+            flag.update(delta);
             if (!flag.collected && flag.checkCollection(body)) {
                 flag.collect();
                 this.audio.win();
-                this.particles.spawnEnemyPop(flag.x + 25, flag.y + 80, this.theme.flag);
+                this.particles.spawnEnemyPop(flag.x + 25, flag.y + 80, zm.theme.flag);
                 this.camera.shake(3, 0.2);
+                if (this.callbacks.collectFlag) this.callbacks.collectFlag();
 
-                if (this.callbacks.collectFlag) {
-                    this.callbacks.collectFlag();
-                }
-
-                if (this.levelManager.allFlagsCollected() && this.boss && !this.bossActive) {
-                    this.bossActive = true;
-                    this.showMessage("⚠️ BOSS APARECEU! ⚠️", 3);
+                const { collected, total } = zm.getFlagProgress();
+                if (collected === total) {
+                    this.showMessage("⚠️ GATE ATIVADO! ⚠️", 3);
                 }
             }
         }
 
-        // Boss
-        if (this.boss && this.bossActive) {
-            this.boss.update(delta, this.platforms, playerPos);
-
-            if (this.boss.defeated && !this.bossDefeated) {
+        // Boss (zona mid apenas)
+        const boss = zm.activeId === "mid" ? zm.active.boss : null;
+        if (boss && this.bossActive) {
+            boss.update(delta, zm.platforms, playerPos);
+            if (boss.defeated && !this.bossDefeated) {
                 this.bossDefeated = true;
                 this.showMessage("BOSS DERROTADO!", 3);
                 this.audio.win();
@@ -144,21 +136,18 @@ export class Game {
         this._checkFall();
         this._checkWin();
 
-        for (const msg of this.messages) {
-            msg.timer -= delta;
-        }
+        for (const msg of this.messages) msg.timer -= delta;
         this.messages = this.messages.filter(m => m.timer > 0);
     }
 
     _checkEnemyCollisions() {
         if (this.invincible > 0) return;
-
-        for (const enemy of this.enemies) {
+        for (const enemy of this.zoneManager.enemies) {
             if (!enemy.alive) continue;
             const col = resolveAABB(this.player.body, enemy.body);
             if (!col) continue;
 
-            const eCX = enemy.body.x + enemy.body.width / 2;
+            const eCX = enemy.body.x + enemy.body.width  / 2;
             const eCY = enemy.body.y + enemy.body.height / 2;
 
             if (col.axis === "y" && col.direction === "bottom" && this.player.body.vy > 0) {
@@ -175,23 +164,23 @@ export class Game {
 
     _checkProjectileCollisions() {
         if (this.invincible > 0) return;
+        const zm = this.zoneManager;
 
-        for (const enemy of this.enemies) {
+        for (const enemy of zm.enemies) {
             for (const proj of enemy.getProjectiles()) {
                 if (!proj.alive) continue;
-                const col = resolveAABB(this.player.body, proj.body);
-                if (col) {
+                if (resolveAABB(this.player.body, proj.body)) {
                     proj.alive = false;
                     this._playerTakeDamage(15);
                 }
             }
         }
 
-        if (this.boss && this.bossActive) {
-            for (const proj of this.boss.getProjectiles()) {
+        const boss = zm.activeId === "mid" ? zm.active.boss : null;
+        if (boss && this.bossActive) {
+            for (const proj of boss.getProjectiles()) {
                 if (!proj.alive) continue;
-                const col = resolveAABB(this.player.body, proj.body);
-                if (col) {
+                if (resolveAABB(this.player.body, proj.body)) {
                     proj.alive = false;
                     this._playerTakeDamage(20);
                 }
@@ -200,22 +189,24 @@ export class Game {
     }
 
     _checkBossCollision() {
-        if (!this.boss || !this.bossActive || this.boss.defeated) return;
+        const zm   = this.zoneManager;
+        const boss = zm.activeId === "mid" ? zm.active.boss : null;
+        if (!boss || !this.bossActive || boss.defeated) return;
         if (this.invincible > 0) return;
 
-        const col = resolveAABB(this.player.body, this.boss.body);
+        const col = resolveAABB(this.player.body, boss.body);
         if (!col) return;
 
         if (col.axis === "y" && col.direction === "bottom" && this.player.body.vy > 0) {
-            const damaged = this.boss.takeDamage(50);
+            const damaged = boss.takeDamage(50);
             if (damaged) {
                 this.player.body.vy = -600;
                 this.audio.enemyDie();
                 this.camera.shake(6, 0.25);
                 this.particles.spawnEnemyPop(
-                    this.boss.body.x + this.boss.body.width / 2,
-                    this.boss.body.y + this.boss.body.height / 2,
-                    this.theme.bossBody
+                    boss.body.x + boss.body.width  / 2,
+                    boss.body.y + boss.body.height / 2,
+                    zm.theme.bossBody
                 );
             }
         } else {
@@ -226,49 +217,42 @@ export class Game {
     _playerTakeDamage(damage) {
         this.invincible = 1.5;
         this.particles.spawnDamageFlash(
-            this.player.body.x + this.player.body.width / 2,
+            this.player.body.x + this.player.body.width  / 2,
             this.player.body.y + this.player.body.height / 2
         );
         this.camera.shake(8, 0.35);
         this.audio.damage();
 
-        // Respawn no início (mantém posição dentro da fase)
-        const start = this.levelManager.playerStart;
+        const start = this.zoneManager.playerStart;
         this.player.body.x  = start.x;
         this.player.body.y  = start.y;
         this.player.body.vx = 0;
         this.player.body.vy = 0;
 
-        if (this.callbacks.takeDamage) {
-            this.callbacks.takeDamage(damage);
-        }
+        if (this.callbacks.takeDamage) this.callbacks.takeDamage(damage);
     }
 
     _checkFall() {
-        if (this.player.body.y > this.WORLD_HEIGHT + 100) {
+        if (this.player.body.y > this.zoneManager.worldHeight + 100) {
             this.camera.shake(6, 0.25);
             this.audio.damage();
-            const start = this.levelManager.playerStart;
+            const start = this.zoneManager.playerStart;
             this.player.body.x  = start.x;
             this.player.body.y  = start.y;
             this.player.body.vx = 0;
             this.player.body.vy = 0;
-
-            if (this.callbacks.onLoseLife) {
-                this.callbacks.onLoseLife();
-            }
+            if (this.callbacks.onLoseLife) this.callbacks.onLoseLife();
         }
     }
 
     _checkWin() {
-        const reachedFlag   = this.player.body.x >= this.flagX;
-        const bossCondition = !this.boss || (this.boss && this.boss.defeated);
-
-        if (reachedFlag && bossCondition) {
+        if (this.zoneManager.activeId !== "mid") return;
+        const boss  = this.zoneManager.active.boss;
+        const bossOk = !this.bossSpawned || (boss && boss.defeated);
+        // Placeholder: gate no x=7600. Etapa 3 substitui por Gate.state === "open"
+        if (this.player.body.x >= 7600 && bossOk) {
             this.audio.win();
-            if (this.callbacks.onWin) {
-                this.callbacks.onWin(this.levelManager.data.id);
-            }
+            if (this.callbacks.onWin) this.callbacks.onWin(1);
         }
     }
 
@@ -277,7 +261,10 @@ export class Game {
     }
 
     render() {
-        const { ctx, canvas, theme } = this;
+        const { ctx, canvas } = this;
+        const zm    = this.zoneManager;
+        const theme = zm.theme;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -300,24 +287,24 @@ export class Game {
 
         this.camera.begin(ctx);
 
-        for (const platform of this.platforms) platform.render(ctx);
-        for (const flag of this.flags)         flag.render(ctx);
+        for (const platform of zm.platforms) platform.render(ctx);
+        for (const flag of zm.active.flags)  flag.render(ctx);
 
-        this._renderFlag(ctx);
+        if (zm.activeId === "mid") this._renderGatePlaceholder(ctx);
 
-        for (const enemy of this.enemies) enemy.render(ctx);
+        for (const enemy of zm.enemies) enemy.render(ctx);
 
-        if (this.boss && this.bossActive) this.boss.render(ctx);
+        const boss = zm.activeId === "mid" ? zm.active.boss : null;
+        if (boss && this.bossActive) boss.render(ctx);
 
         if (this.invincible <= 0 || Math.floor(this.invincible * 8) % 2 === 0) {
             this.player.render(ctx);
         }
 
         this.particles.render(ctx);
-
         this.camera.end(ctx);
 
-        this._renderLevelName(ctx);
+        this._renderZoneName(ctx);
         this._renderMessages(ctx);
     }
 
@@ -325,43 +312,53 @@ export class Game {
         const W  = this.canvas.width;
         const H  = this.canvas.height;
         const cx = this.camera.x;
-
-        for (const layer of this.parallax) {
+        for (const layer of this.zoneManager.parallax) {
             const ox = (cx * layer.speed) % W;
             ctx.save();
             ctx.globalAlpha = layer.alpha ?? 1;
-            for (let tile = -1; tile <= 1; tile++) {
-                layer.draw(ctx, -ox + tile * W, H);
-            }
+            for (let tile = -1; tile <= 1; tile++) layer.draw(ctx, -ox + tile * W, H);
             ctx.restore();
         }
     }
 
-    _renderFlag(ctx) {
-        ctx.fillStyle = "#888";
-        ctx.fillRect(this.flagX, 360, 6, 160);
+    _renderGatePlaceholder(ctx) {
+        const gateX = 7600;
+        const { collected, total } = this.zoneManager.getFlagProgress();
+        const charged = total > 0 && collected === total;
 
-        ctx.fillStyle = this.theme.flag ?? "#f1c40f";
+        ctx.fillStyle = charged ? "#a060ff" : "#555";
+        ctx.fillRect(gateX, 360, 8, 200);
+
+        ctx.strokeStyle = charged ? "#c090ff" : "#666";
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.moveTo(this.flagX + 6,  360);
-        ctx.lineTo(this.flagX + 46, 380);
-        ctx.lineTo(this.flagX + 6,  400);
-        ctx.fill();
+        ctx.arc(gateX + 4, 360, 60, Math.PI, 0);
+        ctx.stroke();
+
+        if (charged) {
+            const pulse = 0.4 + Math.sin(Date.now() / 300) * 0.3;
+            ctx.save();
+            ctx.globalAlpha = pulse;
+            ctx.strokeStyle = "#e0b0ff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(gateX + 4, 360, 64, Math.PI, 0);
+            ctx.stroke();
+            ctx.restore();
+        }
     }
 
-    _renderLevelName(ctx) {
-        const name = this.levelManager.data.name;
+    _renderZoneName(ctx) {
         ctx.save();
         ctx.font = "bold 13px 'Courier New', monospace";
         ctx.fillStyle = "rgba(255,255,255,0.35)";
         ctx.textAlign = "right";
-        ctx.fillText(name, this.canvas.width - 16, 28);
+        ctx.fillText(this.zoneManager.data.name, this.canvas.width - 16, 28);
         ctx.restore();
     }
 
     _renderMessages(ctx) {
         if (this.messages.length === 0) return;
-
         ctx.save();
         ctx.font = "bold 20px 'Courier New', monospace";
         ctx.textAlign = "center";
@@ -370,17 +367,14 @@ export class Game {
         for (const msg of this.messages) {
             const alpha = Math.min(1, msg.timer / 0.5);
             ctx.globalAlpha = alpha;
-
-            const textWidth = ctx.measureText(msg.text).width;
+            const tw = ctx.measureText(msg.text).width;
             ctx.fillStyle = "rgba(0,0,0,0.7)";
-            ctx.fillRect(this.canvas.width / 2 - textWidth / 2 - 20, y - 20, textWidth + 40, 40);
-
+            ctx.fillRect(this.canvas.width / 2 - tw / 2 - 20, y - 20, tw + 40, 40);
             ctx.strokeStyle = "#000";
-            ctx.lineWidth = 4;
+            ctx.lineWidth   = 4;
             ctx.strokeText(msg.text, this.canvas.width / 2, y + 5);
             ctx.fillStyle = "#f5c518";
             ctx.fillText(msg.text, this.canvas.width / 2, y + 5);
-
             y += 50;
         }
         ctx.restore();
