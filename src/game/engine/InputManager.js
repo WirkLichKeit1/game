@@ -4,6 +4,7 @@ export class InputManager {
             left: false,
             right: false,
             jump: false,
+            shoot: false,
         };
         this._onKeyDown = null;
         this._onKeyUp = null;
@@ -12,13 +13,22 @@ export class InputManager {
 
     _bindKeyboard() {
         const map = {
-            ArrowLeft: "left", KeyA: "left",
-            ArrowRight: "right", KeyD: "right",
-            ArrowUp: "jump", KeyW: "jump", Space: "jump",
+            ArrowLeft: "left",
+            KeyA: "left",
+            ArrowRight: "right",
+            KeyD: "right",
+            ArrowUp: "jump",
+            KeyW: "jump",
+            Space: "jump",
+            KeyZ: "shoot",
+            KeyX: "shoot",
         };
 
         this._onKeyDown = (e) => {
-            if (map[e.code]) this.keys[map[e.code]] = true;
+            if (map[e.code]) {
+                e.preventDefault();
+                this.keys[map[e.code]] = true;
+            }
         };
 
         this._onKeyUp = (e) => {

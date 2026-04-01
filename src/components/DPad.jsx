@@ -2,9 +2,9 @@ export function DPad({ gameRef, isLandscape }) {
     const press = (key) => gameRef.current?.input.press(key);
     const release = (key) => gameRef.current?.input.release(key);
 
-    const btn = {
-        width: 72,
-        height: 72,
+    const btnBase = {
+        width: 68,
+        height: 68,
         borderRadius: 14,
         background: "rgba(255,255,255,0.12)",
         border: "2px solid rgba(255,255,255,0.22)",
@@ -18,12 +18,21 @@ export function DPad({ gameRef, isLandscape }) {
         cursor: "pointer",
     };
 
-    const Btn = ({ label, action }) => (
+    const shootBtn = {
+        ...btnBase,
+        background: "rgba(64,255,200,0.15)",
+        border: "2px solid rgba(64,255,200,0.4)",
+        color: "#40ffcc",
+        fontSize: 22,
+    };
+
+    const Btn = ({ label, action, style }) => (
         <div
-            style={btn}
-            onPointerDown={() => press(action)}
-            onPointerUp={() => release(action)}
-            onPointerLeave={() => release(action)}
+            style={style ?? btnBase}
+            onPointerDown={(e) => { e.preventDefault(); press(action); }}
+            onPointerUp={(e) => { e.preventDefault(); release(action); }}
+            onPointerLeave={(e) => { e.preventDefault(); release(action); }}
+            onPointerCancel={(e) => { e.preventDefault(); release(action); }}
         >
             {label}
         </div>
@@ -38,7 +47,7 @@ export function DPad({ gameRef, isLandscape }) {
                     bottom: 24,
                     left: 24,
                     display: "flex",
-                    gap: 12,
+                    gap: 10,
                     pointerEvents: "all",
                     zIndex: 20,
                 }}>
@@ -49,9 +58,12 @@ export function DPad({ gameRef, isLandscape }) {
                     position: "fixed",
                     bottom: 24,
                     right: 24,
+                    display: "flex",
+                    gap: 10,
                     pointerEvents: "all",
                     zIndex: 20,
                 }}>
+                    <Btn label="●" action="shoot" style={shootBtn} />
                     <Btn label="▲" action="jump" />
                 </div>
             </>
@@ -71,11 +83,12 @@ export function DPad({ gameRef, isLandscape }) {
             pointerEvents: "none",
             zIndex: 20,
         }}>
-            <div style={{ display: "flex", gap: 14, pointerEvents: "all" }}>
+            <div style={{ display: "flex", gap: 10, pointerEvents: "all" }}>
                 <Btn label="◀" action="left" />
                 <Btn label="▶" action="right" />
             </div>
-            <div style={{ pointerEvents: "all" }}>
+            <div style={{ display: "flex", gap: 10, pointerEvents: "all" }}>
+                <Btn label="●" action="shoot" style={shootBtn} />
                 <Btn label="▲" action="jump"/>
             </div>
         </div>

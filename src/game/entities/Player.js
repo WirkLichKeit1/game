@@ -1,15 +1,21 @@
 import { PhysicsBody } from "../physics/PhysicsBody.js";
 import { resolveAABB } from "../physics/AABB.js";
 import { AnimationController } from "./AnimationController.js";
+import { PlayerProjectile } from "./PlayerProjectile.js";
 
 const MOVE_SPEED = 280;
 const JUMP_FORCE = -850;
+const SHOOT_COOLDOWN = 0.35;
 
 export class Player {
     constructor(x, y) {
         this.body = new PhysicsBody(x, y, 40, 50);
         this.facing = 1;
         this.anim = new AnimationController();
+        
+        this.projectiles = [];
+        this._shootTimer = 0; // cooldown atual
+        this._shootHeld = false; // evita tiro contínuo segurando o botão
     }
 
     update(delta, input, platforms, worldWidth) {
@@ -28,6 +34,19 @@ export class Player {
         if (keys.jump && this.body.onGround) {
             this.body.vy = JUMP_FORCE;
             this.body.onGround = false;
+        }
+
+        // Tiro - dispara ao pressionar
+        if (this._shootTimer > 0) this._shootTimer -= delta;
+
+        if (keys.shoot) {
+            if (!this._shootHeld && this._shootTimer <= 0) {
+                this._fire();
+                this._shootTimer = SHOOT_COOLDOWN;
+            }
+            this._shootHeld = true;
+        } else {
+            this._shootHeld = false;
         }
 
         this.body.update(delta);
@@ -63,7 +82,27 @@ export class Player {
             this.body.x = worldWidth - this.body.width;
         }
 
+        // Atualiza projéteis
+        for (const proj of this.projectiles) {
+            proj.update(delta, worldWidth);
+        }
+        this.projectiles = this.projectiles.filter(p => p.alive);
+
         this.anim.update(delta, this.body);
+    }
+
+    _fire() {
+        // Projétil sai do centro-lateral do player
+        const x = this.facing > 0
+            ? this.body.x + this.body.width
+            : this.body.x - 14;
+        const y = this.body.y + this.body.height * 0.38;
+
+        this.projectiles.push(new PlayerProjectile(x, y, this.facing));
+    }
+
+    getProjectiles() {
+        return this.projectiles;
     }
 
     render(ctx) {
@@ -73,6 +112,8 @@ export class Player {
         // Centro do personagem - ponto de origem do squash
         const cx = x + width / 2;
         const cy = y + height;
+
+        for (const proj of this.projectiles) proj.render(ctx);
 
         // Pernas: só o flip horizontal, sem squash
         ctx.save();
@@ -97,9 +138,12 @@ export class Player {
         // Olho
         ctx.fillStyle = "#fff";
         ctx.fillRect(6, -height - headSize * 0.4, 7, 7);
-        
         ctx.fillStyle = "#1a1a2e";
         ctx.fillRect(8, -height - headSize * 0.35, 4, 4);
+
+        // Indicador de arma (pequeno cano na frente)
+        ctx.fillStyle = "#2a5aaa";
+        ctx.fillRect(width / 2 - 2, -height * 0.55, 10, 6);
 
         ctx.restore();
     }

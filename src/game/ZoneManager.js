@@ -5,6 +5,7 @@ import { Platform }  from "./entities/Platform.js";
 import { Enemy }     from "./entities/Enemy.js";
 import { Flag }      from "./entities/Flag.js";
 import { Boss }      from "./entities/Boss.js";
+import { Portal }    from "./entities/Portal.js";
 import { parallaxBeach }    from "./parallax/parallaxBeach.js";
 import { parallaxMangrove } from "./parallax/parallaxMangrove.js";
 
@@ -12,7 +13,7 @@ const ZONE_DATA = { mid: zoneMid, sky: zoneSky, cave: zoneCave };
 
 const PARALLAX = {
     mid:  parallaxBeach,
-    sky:  null, // parallax próprio do céu — definido inline abaixo
+    sky:  null,
     cave: parallaxMangrove,
 };
 
@@ -20,35 +21,26 @@ export class ZoneManager {
     constructor(viewWidth = 800, viewHeight = 560) {
         this.viewWidth  = viewWidth;
         this.viewHeight = viewHeight;
+        this.activeId   = "mid";
 
-        // Zona ativa atual
-        this.activeId = "mid";
-
-        // Onde o player vai retornar em cada zona lateral (X na zona mid)
-        // Preenchido quando o player entra numa zona lateral
+        // X de retorno na zona mid quando o player veio de uma lateral
         this.returnX = { sky: 900, cave: 1980 };
 
-        // Constrói as 3 zonas
         this._zones = {};
         for (const id of ["mid", "sky", "cave"]) {
             this._zones[id] = this._buildZone(id);
         }
     }
 
-    // Zona ativa
+    // ─── Zona ativa ────────────────────────────────────────────────────────────
 
-    get active() {
-        return this._zones[this.activeId];
-    }
+    get active()      { return this._zones[this.activeId]; }
+    get data()        { return ZONE_DATA[this.activeId]; }
 
-    get data() {
-        return ZONE_DATA[this.activeId];
-    }
-
-    // Atalhos usados pelo Game
     get platforms()   { return this.active.platforms; }
     get enemies()     { return this.active.enemies; }
     get flags()       { return this.active.flags; }
+    get portals()     { return this.active.portals; }
     get boss()        { return this.activeId === "mid" ? this.active.boss : null; }
     get theme()       { return this.data.theme; }
     get parallax()    { return this.active.parallax; }
@@ -56,39 +48,53 @@ export class ZoneManager {
     get worldHeight() { return this.data.worldHeight; }
     get playerStart() { return this.data.playerStart; }
 
-    // Troca de zona
+    // ─── Troca de zona ─────────────────────────────────────────────────────────
 
     /**
-     * Troca para uma zona.
-     * @param {string} zoneId  - "mid" | "sky" | "cave"
-     * @param {number} returnX - X na zona mid de onde o player veio (só para laterais)
-     * @returns {{ spawnX, spawnY }} ponto de spawn do player na nova zona
+     * Troca para outra zona.
+     * @param {string} zoneId   - zona destino
+     * @param {number} returnX  - X atual do player na mid (guardado para retorno)
+     * @returns {{ spawnX, spawnY }}
      */
     switchTo(zoneId, returnX) {
         const prevId = this.activeId;
 
-        // Guarda o X de retorno se estiver saindo da mid
+        // Guarda X de retorno ao sair da mid
         if (prevId === "mid" && zoneId !== "mid" && returnX !== undefined) {
             this.returnX[zoneId] = returnX;
+
+            // Atualiza o X de retorno no portal de retorno da zona destino
+            const destZone = this._zones[zoneId];
+            for (const portal of destZone.portals) {
+                if (portal.targetZone === "mid") {
+                    portal._returnX = returnX;
+                }
+            }
         }
 
         this.activeId = zoneId;
-        const zoneData = ZONE_DATA[zoneId];
 
-        // Determina ponto de spawn
         let spawnX, spawnY;
 
         if (zoneId === "mid") {
-            // Voltando para mid: usa o X de retorno guardado
-            spawnX = this.returnX[prevId] ?? zoneData.playerStart.x;
-            spawnY = zoneData.playerStart.y;
+            let rawX = this.returnX[prevId] ?? ZONE_DATA["mid"].playerStart.x;
+
+            // Ao voltar da cave, empurra o spawn para DEPOIS do buraco
+            // para o player nao cair de volta nele imediatamente
+            if (prevId === "cave") {
+                const hole = ZONE_DATA["mid"].portalCave;
+                if (hole && rawX >= hole.x && rawX <= hole.x + hole.width) {
+                    rawX = hole.x + hole.width + 60;
+                }
+            }
+
+            spawnX = rawX;
+            spawnY = ZONE_DATA["mid"].playerStart.y;
         } else {
-            // Entrando numa zona lateral: sempre começa do spawn padrão
-            const portalSpawn = prevId === "mid"
-                ? this._getPortalSpawn(prevId, zoneId)
-                : null;
-            spawnX = portalSpawn?.x ?? zoneData.playerStart.x;
-            spawnY = portalSpawn?.y ?? zoneData.playerStart.y;
+            // Entra numa lateral: spawn fixo da zona
+            const spawn = this._getPortalSpawn(prevId, zoneId);
+            spawnX = spawn?.x ?? ZONE_DATA[zoneId].playerStart.x;
+            spawnY = spawn?.y ?? ZONE_DATA[zoneId].playerStart.y;
         }
 
         return { spawnX, spawnY };
@@ -101,27 +107,23 @@ export class ZoneManager {
         return null;
     }
 
-    // Verificações de estado
+    // ─── Verificações ──────────────────────────────────────────────────────────
 
-    /** Todos os inimigos da zona ativa estão mortos? */
     allEnemiesDefeated() {
         return this.active.enemies.length > 0 &&
                this.active.enemies.every(e => !e.alive);
     }
 
-    /** Todas as bandeiras globais coletadas? (mid + sky + cave) */
     allFlagsCollected() {
-        return ["mid", "sky", "cave"].every(id => {
+        return ["sky", "cave"].every(id => {
             const zone = this._zones[id];
             return zone.flags.length === 0 || zone.flags.every(f => f.collected);
         });
     }
 
-    /** Contagem global de bandeiras */
     getFlagProgress() {
-        let collected = 0;
-        let total = 0;
-        for (const id of ["mid", "sky", "cave"]) {
+        let collected = 0, total = 0;
+        for (const id of ["sky", "cave"]) {
             const zone = this._zones[id];
             total     += zone.flags.length;
             collected += zone.flags.filter(f => f.collected).length;
@@ -129,7 +131,7 @@ export class ZoneManager {
         return { collected, total };
     }
 
-    // Construção de zona
+    // ─── Build ─────────────────────────────────────────────────────────────────
 
     _buildZone(id) {
         const data = ZONE_DATA[id];
@@ -154,11 +156,11 @@ export class ZoneManager {
             return new Enemy(e.x, e.y, e.type || "patrol", config);
         });
 
-        // Bandeira da zona lateral — começa oculta, aparece quando todos os inimigos morrem
+        // Bandeiras — só nas laterais, começam escondidas
         const flags = [];
         if (data.flagPosition && id !== "mid") {
             const flag = new Flag(data.flagPosition.x, data.flagPosition.y, id, data.theme);
-            flag.hidden = true; // começa escondida
+            flag.hidden = true;
             flags.push(flag);
         }
 
@@ -168,30 +170,77 @@ export class ZoneManager {
             boss = new Boss(data.boss.x, data.boss.y, data.theme);
         }
 
-        // Parallax
+        // Portais
+        const portals = this._buildPortals(id, data);
+
         const buildParallax = PARALLAX[id];
         const parallax = buildParallax
             ? buildParallax(this.viewWidth)
             : this._buildSkyParallax(this.viewWidth);
 
-        return { platforms, enemies, flags, boss, parallax };
+        return { platforms, enemies, flags, boss, portals, parallax };
     }
 
-    // Parallax inline para o céu (sem arquivo próprio ainda)
+    _buildPortals(id, data) {
+        const portals = [];
+
+        if (id === "mid") {
+            // Portal sky — invisível, aparece quando player se aproxima
+            if (data.portalSky) {
+                const ps = data.portalSky;
+                portals.push(new Portal({
+                    x: ps.x, y: ps.y,
+                    width: ps.width, height: ps.height,
+                    targetZone: "sky",
+                    spawnInTarget: ps.spawnInTarget,
+                    discoveryRadius: ps.discoveryRadius ?? 120,
+                    hidden: true,
+                    color:     "#4040ff",
+                    glowColor: "#8080ff",
+                }));
+            }
+
+            // Buraco cave — sempre visível, visual de abertura no chão
+            if (data.portalCave) {
+                const pc = data.portalCave;
+                portals.push(new Portal({
+                    x: pc.x, y: pc.y,
+                    width: pc.width, height: pc.height,
+                    targetZone: "cave",
+                    spawnInTarget: pc.spawnInTarget,
+                    hidden: false,
+                    isCaveHole: true,
+                }));
+            }
+        } else {
+            // Zonas laterais: portal de retorno para mid, sempre ativo
+            if (data.portalReturn) {
+                const pr = data.portalReturn;
+                portals.push(new Portal({
+                    x: pr.x, y: pr.y,
+                    width: pr.width ?? 60, height: pr.height ?? 100,
+                    targetZone: "mid",
+                    spawnInTarget: { x: this.returnX[id], y: 420 },
+                    hidden: false,
+                    color:     "#40c040",
+                    glowColor: "#80ff80",
+                }));
+            }
+        }
+
+        return portals;
+    }
+
     _buildSkyParallax(W) {
         return [
             {
                 speed: 0.05,
                 alpha: 0.4,
                 draw(ctx, tx, H) {
-                    // Estrelas/pontos de luz no céu profundo
                     const stars = [
-                        { x: 80,  y: H * 0.15, r: 2 },
-                        { x: 200, y: H * 0.08, r: 1 },
-                        { x: 340, y: H * 0.20, r: 2 },
-                        { x: 480, y: H * 0.10, r: 1 },
-                        { x: 620, y: H * 0.18, r: 2 },
-                        { x: 720, y: H * 0.06, r: 1 },
+                        { x: 80,  y: H * 0.15, r: 2 }, { x: 200, y: H * 0.08, r: 1 },
+                        { x: 340, y: H * 0.20, r: 2 }, { x: 480, y: H * 0.10, r: 1 },
+                        { x: 620, y: H * 0.18, r: 2 }, { x: 720, y: H * 0.06, r: 1 },
                     ];
                     ctx.fillStyle = "#a0c8ff";
                     for (const s of stars) {
@@ -205,7 +254,6 @@ export class ZoneManager {
                 speed: 0.15,
                 alpha: 0.25,
                 draw(ctx, tx, H) {
-                    // Nuvens silhueta
                     const clouds = [
                         { x: 50,  y: H * 0.65, w: 160, h: 24 },
                         { x: 300, y: H * 0.72, w: 120, h: 18 },
@@ -213,23 +261,16 @@ export class ZoneManager {
                         { x: 750, y: H * 0.74, w: 100, h: 16 },
                     ];
                     ctx.fillStyle = "#2040a0";
-                    for (const c of clouds) {
-                        ctx.fillRect(tx + c.x, c.y, c.w, c.h);
-                    }
+                    for (const c of clouds) ctx.fillRect(tx + c.x, c.y, c.w, c.h);
                 },
             },
         ];
     }
 
-    // Reseta uma zona (útil para restart)
-    resetZone(id) {
-        this._zones[id] = this._buildZone(id);
-    }
+    resetZone(id) { this._zones[id] = this._buildZone(id); }
 
     resetAll() {
-        for (const id of ["mid", "sky", "cave"]) {
-            this.resetZone(id);
-        }
+        for (const id of ["mid", "sky", "cave"]) this.resetZone(id);
         this.activeId = "mid";
     }
 }
