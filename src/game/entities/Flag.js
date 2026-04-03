@@ -77,7 +77,7 @@ export class Flag {
         ctx.arc(this.x + 25, baseY + 80, 35, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.globalAlpha = this.globalAlpha;
+        ctx.globalAlpha = this.revealAlpha;
 
         // Poste
         ctx.fillStyle = this.poleColor;

@@ -28,16 +28,14 @@ export default function App() {
 
     const handleRestart = useCallback(() => {
         restart();
-        // Reset síncrono - com setTimeout frágil
-        setTimeout(() => {
-            gameRef.current?.reset({
-                onLoseLife: loseLife,
-                onWin: win,
-                takeDamage,
-                collectFlag,
-                setFlagTotal,
-            }, currentLevel);
-        }, 50)
+        // Reset síncrono
+        gameRef.current?.reset({
+            onLoseLife: loseLife,
+            onWin: win,
+            takeDamage,
+            collectFlag,
+            setFlagTotal,
+        }, currentLevel);
     }, [restart, loseLife, win, takeDamage, collectFlag, setFlagTotal, currentLevel]);
 
     const handleNext = useCallback(() => {
