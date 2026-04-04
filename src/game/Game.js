@@ -361,6 +361,8 @@ export class Game {
         const zm = this.zoneManager;
 
         for (const enemy of zm.enemies) {
+            // FIX: projéteis de inimigos mortos não causam dano
+            if (!enemy.alive) continue;
             for (const proj of enemy.getProjectiles()) {
                 if (!proj.alive) continue;
                 if (resolveAABB(this.player.body, proj.body)) {
