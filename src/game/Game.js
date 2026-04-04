@@ -7,7 +7,8 @@ import { ZoneManager }    from "./ZoneManager.js";
 import { ParticleSystem } from "./engine/ParticleSystem.js";
 import { AudioManager }   from "./engine/AudioManager.js";
 
-const FADE_DURATION = 0.35;
+const FADE_DURATION  = 0.35;
+const ROAR_PAUSE     = 0.6;  // pausa após roar antes de iniciar IA
 
 export class Game {
     constructor(canvas, callbacks, levelId = 1) {
@@ -20,7 +21,6 @@ export class Game {
         this.audio     = new AudioManager();
 
         this.zoneManager = new ZoneManager(canvas.width, canvas.height);
-
         this._initFromZone();
 
         this.loop = new GameLoop(
@@ -28,14 +28,18 @@ export class Game {
             ()      => this.render()
         );
 
-        this._wasOnGround   = false;
-        this.messages       = [];
-        this.bossDefeated   = false;
-        this.bossActive     = false;
-        this.bossSpawned    = false;
-        this._transition    = null;
-        this._portalCooldown = 0; // evita re-trigger imediato apos transicao
+        this._wasOnGround    = false;
+        this.messages        = [];
+        this.bossDefeated    = false;
+        this.bossSpawned     = false;   // true após startSpawn()
+        this._transition     = null;
+        this._portalCooldown = 0;
+
+        // Roar pause — congela IA logo após o spawn completar
+        this._roarPause  = 0;
     }
+
+    // ─── Init ───────────────────────────────────────────────────────────────────
 
     _initFromZone(spawnX, spawnY) {
         const zm = this.zoneManager;
@@ -56,12 +60,12 @@ export class Game {
         this.callbacks = { ...this.callbacks, ...callbacks };
         this.zoneManager.resetAll();
         this._initFromZone();
-        this.bossActive   = false;
-        this.bossDefeated = false;
-        this.bossSpawned  = false;
+        this.bossSpawned     = false;
+        this.bossDefeated    = false;
         this.messages        = [];
         this._transition     = null;
         this._portalCooldown = 0;
+        this._roarPause      = 0;
     }
 
     start()   { this.loop.start(); }
@@ -72,7 +76,7 @@ export class Game {
         this.audio.destroy();
     }
 
-    // ─── Transição ──────────────────────────────────────────────────────────────
+    // ─── Transição de zona ──────────────────────────────────────────────────────
 
     _startTransition(targetZone, playerReturnX) {
         if (this._transition) return;
@@ -90,15 +94,15 @@ export class Game {
 
         if (t.phase === "fade-out") {
             t.alpha = Math.min(1, t.alpha + delta / FADE_DURATION);
+
             if (t.alpha >= 1) {
                 const { spawnX, spawnY } = this.zoneManager.switchTo(t.targetZone, t.playerReturnX);
 
-                this.player.body.x  = spawnX;
-                this.player.body.y  = spawnY;
-                this.player.body.vx = 0;
-                this.player.body.vy = 0;
-                // Limpa projéteis ao trocar de zona
-                this.player.projectiles = [];
+                this.player.body.x       = spawnX;
+                this.player.body.y       = spawnY;
+                this.player.body.vx      = 0;
+                this.player.body.vy      = 0;
+                this.player.projectiles  = [];
 
                 this.camera = new Camera(
                     this.zoneManager.worldWidth,
@@ -114,8 +118,8 @@ export class Game {
         } else {
             t.alpha = Math.max(0, t.alpha - delta / FADE_DURATION);
             if (t.alpha <= 0) {
-                this._transition    = null;
-                this._portalCooldown = 1.0; // 1s de graca apos chegar numa zona
+                this._transition     = null;
+                this._portalCooldown = 1.0;
             }
         }
     }
@@ -132,6 +136,7 @@ export class Game {
         const body   = this.player.body;
         const moving = Math.abs(body.vx) > 10;
 
+        // Pó
         if (this._wasOnGround && !body.onGround && body.vy < 0) {
             this.particles.spawnDust(body.x + body.width / 2, body.y + body.height, zm.theme.platformTop ?? "#c4a882");
             this.audio.jump();
@@ -141,6 +146,7 @@ export class Game {
         }
         this._wasOnGround = body.onGround;
 
+        // Opacidade dinâmica (céu)
         for (const platform of zm.platforms) {
             platform.updateOpacity(body.x + body.width / 2, body.y + body.height / 2);
         }
@@ -151,9 +157,71 @@ export class Game {
 
         const playerPos = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
 
+        // Portal cooldown
         if (this._portalCooldown > 0) this._portalCooldown -= delta;
         this._updatePortals(delta, body);
 
+        // Gate
+        const gate = zm.gate;
+        if (gate) {
+            gate.update(delta);
+            gate.resolveCollision(body);
+
+            // Charge quando todas as bandeiras forem coletadas
+            const { collected, total } = zm.getFlagProgress();
+            if (total > 0 && collected === total && gate.state === "locked") {
+                gate.charge();
+                this.showMessage("⚠️ GATE ATIVADO! ⚠️", 3);
+            }
+        }
+
+        // Boss
+        const boss = zm.activeId === "mid" ? zm.active.boss : null;
+
+        if (boss && !this.bossDefeated) {
+            // Trigger de spawn: player se aproxima do gate com gate charged
+            if (!this.bossSpawned && gate && gate.state === "charged") {
+                const triggerX = zm.data.boss?.triggerX ?? gate.x - 300;
+                if (body.x >= triggerX) {
+                    this.bossSpawned = true;
+                    boss.startSpawn();
+                    this.showMessage("⚠️ CHEFE GUARDIÃO ⚠️", 2.5);
+                    this.camera.shake(6, 0.4);
+                    this.audio.damage();
+                }
+            }
+
+            if (this.bossSpawned) {
+                // Roar pause após spawn completar
+                if (this._roarPause > 0) {
+                    this._roarPause -= delta;
+                } else {
+                    boss.update(delta, zm.platforms, playerPos);
+                }
+
+                // Detecta o roar
+                if (boss._roar) {
+                    boss._roar = false;
+                    this._roarPause = ROAR_PAUSE;
+                    this.showMessage("PREPARE-SE!", 2);
+                    this.camera.shake(12, 0.5);
+                    this.audio.damage();
+                }
+
+                // Boss derrotado
+                if (boss.defeated && !this.bossDefeated) {
+                    this.bossDefeated = true;
+                    this.showMessage("BOSS DERROTADO!", 3);
+                    this.audio.win();
+                    this.camera.shake(10, 0.5);
+
+                    // Abre o gate
+                    if (gate) gate.open();
+                }
+            }
+        }
+
+        // Inimigos da zona ativa
         for (const enemy of zm.enemies) {
             enemy.update(delta, zm.platforms, playerPos);
         }
@@ -174,21 +242,6 @@ export class Game {
                 this.particles.spawnEnemyPop(flag.x + 25, flag.y + 80, zm.theme.flag);
                 this.camera.shake(3, 0.2);
                 if (this.callbacks.collectFlag) this.callbacks.collectFlag();
-
-                const { collected, total } = zm.getFlagProgress();
-                if (collected === total) this.showMessage("⚠️ GATE ATIVADO! ⚠️", 3);
-            }
-        }
-
-        // Boss
-        const boss = zm.activeId === "mid" ? zm.active.boss : null;
-        if (boss && this.bossActive) {
-            boss.update(delta, zm.platforms, playerPos);
-            if (boss.defeated && !this.bossDefeated) {
-                this.bossDefeated = true;
-                this.showMessage("BOSS DERROTADO!", 3);
-                this.audio.win();
-                this.camera.shake(10, 0.5);
             }
         }
 
@@ -205,6 +258,8 @@ export class Game {
         this.messages = this.messages.filter(m => m.timer > 0);
     }
 
+    // ─── Portais ────────────────────────────────────────────────────────────────
+
     _updatePortals(delta, playerBody) {
         for (const portal of this.zoneManager.portals) {
             if (portal.state === "hidden") {
@@ -215,7 +270,14 @@ export class Game {
             }
             portal.update(delta);
 
-            if (this._portalCooldown <= 0 && portal.checkTrigger(playerBody)) {
+            if (this._portalCooldown > 0) continue;
+
+            // Portal cave: só ativa quando player está caindo (vy > 0)
+            // Isso permite passar por cima do buraco sem cair
+            const isCavePortal = portal.isCaveHole;
+            if (isCavePortal && playerBody.vy <= 0) continue;
+
+            if (portal.checkTrigger(playerBody)) {
                 const returnX = playerBody.x + playerBody.width / 2;
                 this._startTransition(portal.targetZone, returnX);
 
@@ -232,7 +294,7 @@ export class Game {
         }
     }
 
-    // ─── Projéteis do player atingem inimigos / boss ─────────────────────────────
+    // ─── Colisões ───────────────────────────────────────────────────────────────
 
     _checkPlayerProjectileHits() {
         const zm = this.zoneManager;
@@ -241,24 +303,13 @@ export class Game {
             if (!proj.alive) continue;
             const pb = proj.bounds;
 
-            // Verifica inimigos
             for (const enemy of zm.enemies) {
                 if (!enemy.alive) continue;
                 const eb = enemy.body.bounds;
-
-                const hit = !(pb.right  <= eb.left  ||
-                              pb.left   >= eb.right ||
-                              pb.bottom <= eb.top   ||
-                              pb.top    >= eb.bottom);
-
-                if (hit) {
+                if (!(pb.right <= eb.left || pb.left >= eb.right || pb.bottom <= eb.top || pb.top >= eb.bottom)) {
                     proj.alive  = false;
                     enemy.alive = false;
-                    this.particles.spawnEnemyPop(
-                        enemy.body.x + enemy.body.width  / 2,
-                        enemy.body.y + enemy.body.height / 2,
-                        enemy.colorBody
-                    );
+                    this.particles.spawnEnemyPop(enemy.body.x + enemy.body.width/2, enemy.body.y + enemy.body.height/2, enemy.colorBody);
                     this.camera.shake(3, 0.1);
                     this.audio.enemyDie();
                     break;
@@ -267,24 +318,14 @@ export class Game {
 
             if (!proj.alive) continue;
 
-            // Verifica boss
             const boss = zm.activeId === "mid" ? zm.active.boss : null;
-            if (boss && this.bossActive && !boss.defeated) {
+            if (boss && this.bossSpawned && !boss.spawning && !boss.defeated) {
                 const bb = boss.body.bounds;
-                const hitBoss = !(pb.right  <= bb.left  ||
-                                  pb.left   >= bb.right ||
-                                  pb.bottom <= bb.top   ||
-                                  pb.top    >= bb.bottom);
-
-                if (hitBoss) {
+                if (!(pb.right <= bb.left || pb.left >= bb.right || pb.bottom <= bb.top || pb.top >= bb.bottom)) {
                     proj.alive = false;
-                    const damaged = boss.takeDamage(25); // menos dano que pular em cima
+                    const damaged = boss.takeDamage(25);
                     if (damaged) {
-                        this.particles.spawnEnemyPop(
-                            boss.body.x + boss.body.width  / 2,
-                            boss.body.y + boss.body.height / 2,
-                            zm.theme.bossBody
-                        );
+                        this.particles.spawnEnemyPop(boss.body.x + boss.body.width/2, boss.body.y + boss.body.height/2, zm.theme.bossBody);
                         this.camera.shake(3, 0.15);
                         this.audio.enemyDie();
                     }
@@ -292,8 +333,6 @@ export class Game {
             }
         }
     }
-
-    // ─── Colisões ───────────────────────────────────────────────────────────────
 
     _checkEnemyCollisions() {
         if (this.invincible > 0) return;
@@ -332,7 +371,7 @@ export class Game {
         }
 
         const boss = zm.activeId === "mid" ? zm.active.boss : null;
-        if (boss && this.bossActive) {
+        if (boss && this.bossSpawned && !boss.spawning) {
             for (const proj of boss.getProjectiles()) {
                 if (!proj.alive) continue;
                 if (resolveAABB(this.player.body, proj.body)) {
@@ -346,7 +385,8 @@ export class Game {
     _checkBossCollision() {
         const zm   = this.zoneManager;
         const boss = zm.activeId === "mid" ? zm.active.boss : null;
-        if (!boss || !this.bossActive || boss.defeated) return;
+        // Sem colisão durante spawn ou após derrotado
+        if (!boss || !this.bossSpawned || boss.spawning || boss.defeated) return;
         if (this.invincible > 0) return;
 
         const col = resolveAABB(this.player.body, boss.body);
@@ -403,9 +443,12 @@ export class Game {
 
     _checkWin() {
         if (this.zoneManager.activeId !== "mid") return;
-        const boss   = this.zoneManager.active.boss;
-        const bossOk = !this.bossSpawned || (boss && boss.defeated);
-        if (this.player.body.x >= 7600 && bossOk) {
+
+        // Vitória: gate aberto + player atravessa
+        const gate = this.zoneManager.gate;
+        if (!gate || gate.state !== "open") return;
+
+        if (this.player.body.x >= gate.x + gate.width + 20) {
             this.audio.win();
             if (this.callbacks.onWin) this.callbacks.onWin(1);
         }
@@ -448,12 +491,15 @@ export class Game {
         for (const portal   of zm.portals)   portal.render(ctx);
         for (const flag     of zm.active.flags) flag.render(ctx);
 
-        if (zm.activeId === "mid") this._renderGatePlaceholder(ctx);
+        // Gate
+        const gate = zm.gate;
+        if (gate) gate.render(ctx);
 
         for (const enemy of zm.enemies) enemy.render(ctx);
 
+        // Boss
         const boss = zm.activeId === "mid" ? zm.active.boss : null;
-        if (boss && this.bossActive) boss.render(ctx);
+        if (boss && this.bossSpawned) boss.render(ctx);
 
         if (this.invincible <= 0 || Math.floor(this.invincible * 8) % 2 === 0) {
             this.player.render(ctx);
@@ -488,35 +534,9 @@ export class Game {
         }
     }
 
-    _renderGatePlaceholder(ctx) {
-        const gateX = 7600;
-        const { collected, total } = this.zoneManager.getFlagProgress();
-        const charged = total > 0 && collected === total;
-
-        ctx.fillStyle = charged ? "#a060ff" : "#555";
-        ctx.fillRect(gateX, 360, 8, 200);
-        ctx.strokeStyle = charged ? "#c090ff" : "#666";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(gateX + 4, 360, 60, Math.PI, 0);
-        ctx.stroke();
-
-        if (charged) {
-            const pulse = 0.4 + Math.sin(Date.now() / 300) * 0.3;
-            ctx.save();
-            ctx.globalAlpha = pulse;
-            ctx.strokeStyle = "#e0b0ff";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(gateX + 4, 360, 64, Math.PI, 0);
-            ctx.stroke();
-            ctx.restore();
-        }
-    }
-
     _renderZoneName(ctx) {
         ctx.save();
-        ctx.font = "bold 13px 'Courier New', monospace";
+        ctx.font      = "bold 13px 'Courier New', monospace";
         ctx.fillStyle = "rgba(255,255,255,0.35)";
         ctx.textAlign = "right";
         ctx.fillText(this.zoneManager.data.name, this.canvas.width - 16, 28);
@@ -526,7 +546,7 @@ export class Game {
     _renderMessages(ctx) {
         if (this.messages.length === 0) return;
         ctx.save();
-        ctx.font = "bold 20px 'Courier New', monospace";
+        ctx.font      = "bold 20px 'Courier New', monospace";
         ctx.textAlign = "center";
 
         let y = this.canvas.height / 2 - 100;
@@ -535,7 +555,7 @@ export class Game {
             ctx.globalAlpha = alpha;
             const tw = ctx.measureText(msg.text).width;
             ctx.fillStyle = "rgba(0,0,0,0.7)";
-            ctx.fillRect(this.canvas.width / 2 - tw / 2 - 20, y - 20, tw + 40, 40);
+            ctx.fillRect(this.canvas.width/2 - tw/2 - 20, y - 20, tw + 40, 40);
             ctx.strokeStyle = "#000";
             ctx.lineWidth   = 4;
             ctx.strokeText(msg.text, this.canvas.width / 2, y + 5);

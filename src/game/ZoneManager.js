@@ -5,6 +5,7 @@ import { Platform }  from "./entities/Platform.js";
 import { Enemy }     from "./entities/Enemy.js";
 import { Flag }      from "./entities/Flag.js";
 import { Boss }      from "./entities/Boss.js";
+import { Gate }      from "./entities/Gate.js";
 import { Portal }    from "./entities/Portal.js";
 import { parallaxBeach }    from "./parallax/parallaxBeach.js";
 import { parallaxMangrove } from "./parallax/parallaxMangrove.js";
@@ -42,6 +43,7 @@ export class ZoneManager {
     get flags()       { return this.active.flags; }
     get portals()     { return this.active.portals; }
     get boss()        { return this.activeId === "mid" ? this.active.boss : null; }
+    get gate()        { return this.activeId === "mid" ? this.active.gate : null; }
     get theme()       { return this.data.theme; }
     get parallax()    { return this.active.parallax; }
     get worldWidth()  { return this.data.worldWidth; }
@@ -170,6 +172,12 @@ export class ZoneManager {
             boss = new Boss(data.boss.x, data.boss.y, data.theme);
         }
 
+        // Gate (só na mid)
+        let gate = null;
+        if (id === "mid" && data.gate) {
+            gate = new Gate(data.gate.x, data.gate.y, data.theme);
+        }
+
         // Portais
         const portals = this._buildPortals(id, data);
 
@@ -178,7 +186,7 @@ export class ZoneManager {
             ? buildParallax(this.viewWidth)
             : this._buildSkyParallax(this.viewWidth);
 
-        return { platforms, enemies, flags, boss, portals, parallax };
+        return { platforms, enemies, flags, boss, gate, portals, parallax };
     }
 
     _buildPortals(id, data) {

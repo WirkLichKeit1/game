@@ -109,9 +109,9 @@ export const zoneMid = {
     // Buraco para zona cave — visível no chão
     portalCave: {
         x: 1880,      // gap entre plataformas (1480+400=1880, próximo começa em 2080)
-        y: 460,       // topo do buraco
+        y: 560,       // topo do buraco
         width: 200,
-        height: 100,  // profundidade do trigger
+        height: 80,   // profundidade do trigger
         targetZone: "cave",
         spawnInTarget: { x: 100, y: 300 },
         hidden: false,                     // sempre visível como abertura escura
