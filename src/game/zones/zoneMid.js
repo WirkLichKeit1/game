@@ -96,25 +96,26 @@ export const zoneMid = {
 
     // Portal para zona sky — invisível, aparece quando player passa pela área
     portalSky: {
-        x: 870,       // alinhado com a plataforma do topo
-        y: 200,       // acima da plataforma (y:260)
+        x: 870,
+        y: 200,
         width: 60,
         height: 80,
         targetZone: "sky",
-        spawnInTarget: { x: 100, y: 420 }, // onde o player aparece no céu
-        discoveryRadius: 120,              // raio para revelar o portal
-        hidden: true,                      // começa invisível
+        spawnInTarget: { x: 100, y: 420 },
+        discoveryRadius: 120,
+        hidden: true,
     },
 
     // Buraco para zona cave — visível no chão
     portalCave: {
-        x: 1880,      // gap entre plataformas (1480+400=1880, próximo começa em 2080)
-        y: 560,       // topo do buraco
+        x: 1880,
+        y: 560,
         width: 200,
-        height: 80,   // profundidade do trigger
+        height: 80,
         targetZone: "cave",
-        spawnInTarget: { x: 100, y: 300 },
-        hidden: false,                     // sempre visível como abertura escura
+        // spawnInTarget corrigido: player cai na plataforma de chegada da cave (y=80)
+        spawnInTarget: { x: 120, y: 80 },
+        hidden: false,
     },
 
     // Gate no final — bloqueia acesso à fase 2
@@ -129,6 +130,6 @@ export const zoneMid = {
     boss: {
         x: 7200,
         y: 410,
-        triggerX: 7000, // player passa desse X com gate charged → spawn
+        triggerX: 7000,
     },
 };
